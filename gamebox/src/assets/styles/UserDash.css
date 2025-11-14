@@ -1,0 +1,73 @@
+.userdash-page {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0a0a0a, #1b1b2f);
+  padding: 20px;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.userdash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.userdash-header h1 {
+  font-size: 1.8rem;
+  color: #a855f7;
+}
+
+.userdash-buttons button {
+  margin-left: 10px;
+  background-color: #6562df;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.userdash-buttons button:hover {
+  background-color: #4a48c7;
+}
+
+.userdash-buttons .logout {
+  background-color: #fa5000;
+}
+
+.userdash-buttons .logout:hover {
+  background-color: #e04a00;
+}
+
+
+
+h2 {
+  margin-bottom: 15px;
+  color: #a855f7;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 0 0.5rem rgba(168, 85, 247, 0.4);
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  color: white;
+}
+
+.status-active {
+  color: green;
+  font-weight: 600;
+}
+
+.status-overdue {
+  color: red;
+  font-weight: 600;
+}
