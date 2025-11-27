@@ -124,3 +124,14 @@
 .signup-link a:hover {
   color: #d8b4fe;
 }
+
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #fcc;
+  font-size: 14px;
+}

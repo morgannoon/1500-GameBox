@@ -5,9 +5,8 @@ CREATE TABLE Customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
     password VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone_number VARCHAR(15)
+    last_name VARCHAR(100),
+    email VARCHAR(100) UNIQUE NOT NULL
 );
 
 CREATE TABLE Store (
@@ -80,5 +79,3 @@ CREATE TABLE Reserve (
     FOREIGN KEY (inventory_id) REFERENCES Inventory(inventory_id),
     FOREIGN KEY (employee_id) REFERENCES Employee(employee_id)
 );
-
-SHOW TABLES;

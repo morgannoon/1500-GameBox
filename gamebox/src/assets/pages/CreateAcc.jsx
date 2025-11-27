@@ -7,17 +7,48 @@ function CreateAcc() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState(""); // For server or validation errors
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
+    // Check if passwords match
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
-    console.log("Account created:", { username, email, password });
-    navigate("/home"); // Navigate to Home page after creation
+
+    try {
+      const response = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        credentials: "include", // CRITICAL: This sends the session cookie after registration
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Status 201: Registration successful
+        console.log("Registration successful:", data);
+        alert(`Account created for ${data.username}! Please sign in.`);
+        // Redirect to sign-in page after successful registration
+        navigate("/signin");
+      } else {
+        // Handle server errors (400, 409, 500)
+        console.log("Registration failed:", data);
+        // Display the specific error message from the server (e.g., "Email already exists")
+        setError(data.error || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error connecting to server:", err);
+      setError("Could not connect to the API server.");
+    }
   };
 
   return (
@@ -38,7 +69,7 @@ function CreateAcc() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your gamer tag"
+              placeholder="firstname_lastname (e.g., Jane_Doe)"
             />
           </div>
 
@@ -75,6 +106,8 @@ function CreateAcc() {
             />
           </div>
 
+          {error && <p className="error-message">{error}</p>}
+
           <button type="submit" className="create-button">
             Create Account
           </button>
@@ -87,8 +120,7 @@ function CreateAcc() {
         </div>
 
         <p className="signin-link">
-          Already have an account?{" "}
-          <Link to="/signin">Sign in</Link>
+          Already have an account? <Link to="/signin">Sign in</Link>
         </p>
       </div>
     </div>
