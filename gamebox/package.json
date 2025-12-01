@@ -3,9 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "start": "concurrently \"vite\" \"cd backend && node server.js\"",
+"scripts": {
+    "start": "concurrently \"vite\" \"cd backend/db && python app.py\"",
     "dev": "vite",
+    "backend": "cd backend/db && python app.py",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
