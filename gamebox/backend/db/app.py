@@ -36,7 +36,10 @@ def get_db_connection():
 def health_check():
     return jsonify({"status": "working"}), 200
 
-# --- Registration ---
+
+# --------------------------
+#       REGISTRATION
+# --------------------------
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
@@ -87,9 +90,12 @@ def register():
         print(f"Registration error: {str(e)}")
         return jsonify({"error": "Registration failed"}), 500
 
-# --- Login ---
-@app.route('/api/login', methods=['POST'])
-def login():
+
+# --------------------------
+#         SIGN IN (User)
+# --------------------------
+@app.route('/api/sign-in', methods=['POST']) # <-- CHANGED ROUTE
+def sign_in(): # <-- CHANGED FUNCTION NAME
     try:
         data = request.get_json()
         email = data.get('email', '').strip()
@@ -124,13 +130,19 @@ def login():
         print(f"Login error: {str(e)}")
         return jsonify({"error": "Login failed"}), 500
 
-# --- Logout ---
+
+# --------------------------
+#           LOGOUT
+# --------------------------
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({"message": "Logout successful"}), 200
 
-# --- Check auth ---
+
+# --------------------------
+#         CHECK AUTH
+# --------------------------
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
     if 'customer_id' in session:
@@ -143,15 +155,16 @@ def check_auth():
     else:
         return jsonify({"authenticated": False}), 401
 
-# --- Get Games ---
-# --- Games endpoint with inventory & reviews aggregation ---
+
+# --------------------------
+#         GAMES
+# --------------------------
 @app.route('/api/games', methods=['GET'])
 def get_games():
     try:
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
 
-        # Fetch games with total_available and average rating
         cursor.execute("""
             SELECT 
                 g.game_id,
@@ -172,7 +185,6 @@ def get_games():
 
         games = cursor.fetchall()
 
-        # Add available field for frontend
         for game in games:
             game['available'] = game['total_available'] > 0
 
@@ -185,33 +197,34 @@ def get_games():
         return jsonify({"error": "Failed to fetch games"}), 500
 
 
+# --------------------------
+#     RENTALS (PLACEHOLDER)
+# --------------------------
 @app.route('/api/current-rentals', methods=['GET'])
 def current_rentals():
-    # Fetch current rentals for the logged-in user
     if 'customer_id' not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
-    customer_id = session['customer_id']
-    # Example query: replace with real DB query
     rentals = [
         {"title": "Elden Ring", "rentalPrice": 9.99, "dueDate": "2025-11-20", "status": "Active"},
     ]
     return jsonify(rentals), 200
+
 
 @app.route('/api/rental-history', methods=['GET'])
 def rental_history():
     if 'customer_id' not in session:
         return jsonify({"error": "Not authenticated"}), 401
 
-    customer_id = session['customer_id']
-    # Example query: replace with real DB query
     history = [
         {"title": "The Witcher 3", "rentalPrice": 4.99, "returnDate": "2025-10-25"},
     ]
     return jsonify(history), 200
 
 
-#reserve
+# --------------------------
+#       RESERVE GAME
+# --------------------------
 @app.route('/api/games/<int:game_id>/reserve', methods=['POST'])
 def reserve_game(game_id):
     if 'customer_id' not in session:
@@ -223,7 +236,6 @@ def reserve_game(game_id):
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
 
-        # Check total available copies
         cursor.execute("""
             SELECT SUM(available_copies) AS total_available
             FROM Inventory
@@ -235,7 +247,6 @@ def reserve_game(game_id):
             con.close()
             return jsonify({"error": "No copies available"}), 400
 
-        # Reserve a copy: pick first inventory record with available copies
         cursor.execute("""
             SELECT inventory_id, available_copies
             FROM Inventory
@@ -249,16 +260,15 @@ def reserve_game(game_id):
             con.close()
             return jsonify({"error": "No copies available"}), 400
 
-        # Decrease available copies by 1
         cursor.execute("""
             UPDATE Inventory
             SET available_copies = available_copies - 1
             WHERE inventory_id = %s
         """, (inventory['inventory_id'],))
 
-        # Create rental record
         today = datetime.today()
-        due_date = today + timedelta(days=7)  # 1 week rental
+        due_date = today + timedelta(days=7)
+
         cursor.execute("""
             INSERT INTO Rentals (customer_id, game_id, rental_date, due_date, status)
             VALUES (%s, %s, %s, %s, %s)
@@ -275,6 +285,9 @@ def reserve_game(game_id):
         return jsonify({"error": "Reservation failed"}), 500
 
 
+# --------------------------
+#     STORE INVENTORY
+# --------------------------
 @app.route('/api/stores/<int:store_id>/inventory/<int:inventory_id>', methods=['GET'])
 def get_inventory_by_store(store_id, inventory_id):
     try:
@@ -297,6 +310,10 @@ def get_inventory_by_store(store_id, inventory_id):
         print("Error fetching inventory:", e)
         return jsonify({"error": "Could not fetch inventory"}), 500
 
+
+# --------------------------
+#   UPDATE RESERVATION
+# --------------------------
 @app.route('/api/reserve/<int:reserve_id>', methods=['PUT'])
 def update_reservation(reserve_id):
     try:
@@ -317,7 +334,9 @@ def update_reservation(reserve_id):
         return jsonify({"error": "Could not update reservation"}), 500
 
 
-# Add review
+# --------------------------
+#         REVIEWS
+# --------------------------
 @app.route('/api/reviews', methods=['POST'])
 def add_review():
     try:
@@ -334,18 +353,23 @@ def add_review():
         cursor = con.cursor()
         cursor.execute("""
             INSERT INTO Reviews (game_id, customer_id, rating, review, creation_date)
-            VALUES (%s,%s,%s,%s,CURDATE())
+            VALUES (%s, %s, %s, %s, CURDATE())
         """, (game_id, customer_id, rating, review))
         con.commit()
         review_id = cursor.lastrowid
         cursor.close()
         con.close()
+
         return jsonify({"message": "Review added successfully", "review_id": review_id}), 201
+
     except Exception as e:
         print("Add review error:", e)
         return jsonify({"error": "Could not add review"}), 500
 
-# Get all employees
+
+# --------------------------
+#       EMPLOYEES
+# --------------------------
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     try:
@@ -360,7 +384,61 @@ def get_employees():
         print("Get employees error:", e)
         return jsonify({"error": "Could not fetch employees"}), 500
 
-# Get inventory
+
+@app.route('/api/login-employee', methods=['POST'])
+def login_employee():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
+
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        # Assuming the employee email column is named 'business_email' based on previous analysis
+        cursor.execute("SELECT * FROM Employee WHERE business_email = %s", (email,)) 
+        employee = cursor.fetchone()
+        cursor.close()
+        con.close()
+
+        if not employee or not check_password_hash(employee['password'], password):
+            return jsonify({"error": "Invalid employee email or password"}), 401
+
+        session.permanent = True
+        session['employee_id'] = employee['employee_id']
+        session['employee_email'] = employee['business_email'] # <-- FIXED
+        session['employee_name'] = f"{employee['first_name']} {employee['last_name']}"
+
+        return jsonify({
+            "message": "Employee login successful",
+            "employee_id": employee['employee_id'],
+            "name": session['employee_name'],
+            "email": employee['business_email'] # <-- FIXED
+        }), 200
+
+    except Exception as e:
+        print(f"Employee login error: {str(e)}")
+        return jsonify({"error": "Employee login failed"}), 500
+
+
+@app.route('/api/check-auth-employee', methods=['GET'])
+def check_auth_employee():
+    if 'employee_id' in session:
+        return jsonify({
+            "authenticated": True,
+            "employee_id": session['employee_id'],
+            "name": session['employee_name'],
+            "email": session['employee_email']
+        }), 200
+    else:
+        return jsonify({"authenticated": False}), 401
+
+
+# --------------------------
+#       INVENTORY
+# --------------------------
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
     try:
@@ -375,7 +453,10 @@ def get_inventory():
         print("Get inventory error:", e)
         return jsonify({"error": "Could not fetch inventory"}), 500
 
-# Get game by ID
+
+# --------------------------
+#       GAME BY ID
+# --------------------------
 @app.route('/api/games/<int:game_id>', methods=['GET'])
 def get_game(game_id):
     try:
@@ -385,47 +466,64 @@ def get_game(game_id):
         game = cursor.fetchone()
         cursor.close()
         con.close()
+
         if not game:
             return jsonify({"error": "Game not found"}), 404
+
         return jsonify(game), 200
+
     except Exception as e:
         print("Get game error:", e)
         return jsonify({"error": "Could not fetch game"}), 500
 
-# Get customer by ID
+
+# --------------------------
+#     CUSTOMER BY ID
+# --------------------------
 @app.route('/api/customers/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
     try:
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
-        cursor.execute("SELECT customer_id, first_name, last_name, email FROM Customer WHERE customer_id = %s", (customer_id,))
+        cursor.execute("SELECT customer_id, first_name, last_name, email FROM Customer WHERE customer_id=%s", (customer_id,))
         customer = cursor.fetchone()
         cursor.close()
         con.close()
+
         if not customer:
             return jsonify({"error": "Customer not found"}), 404
+
         return jsonify(customer), 200
+
     except Exception as e:
         print("Get customer error:", e)
         return jsonify({"error": "Could not fetch customer"}), 500
 
+
+# --------------------------
+#         STORES
+# --------------------------
 @app.route("/api/stores", methods=["GET"])
 def get_stores():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
-        # Replace 'store_id', 'address', 'city' with your actual column names
         cursor.execute("SELECT store_id, address, city FROM Store")
         stores = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
         return jsonify(stores)
+
     except Exception as e:
         print("Error fetching stores:", e)
         return jsonify({"error": "Failed to fetch stores"}), 500
 
 
-# --- Run server ---
+# --------------------------
+#       RUN SERVER
+# --------------------------
 if __name__ == "__main__":
     print("Starting Flask server...")
     print("Make sure MySQL container 'mysql-gamebox' is running and DB is initialized!")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5001)

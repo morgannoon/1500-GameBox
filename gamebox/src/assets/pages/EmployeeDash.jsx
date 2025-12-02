@@ -6,10 +6,10 @@ function EmployeeDash() {
   const [editingGameId, setEditingGameId] = useState(null);
   const [newGame, setNewGame] = useState({
     title: "",
-    genre: "",
+    platform_name: "", // Updated field for consistency
     availability: true,
-    copies: 1,
-    price: 0,
+    total_available: 1, // Updated field for consistency
+    rentalPrice: 0, // Updated field for consistency
   });
 
   // Fetch all games on mount
@@ -19,22 +19,31 @@ function EmployeeDash() {
 
   const fetchGames = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/games", {
+      const res = await fetch("http://localhost:5001/api/games", {
         credentials: "include",
       });
       const data = await res.json();
       setGames(data);
     } catch (err) {
       console.error("Error fetching games:", err);
+      // Optional: set a visible error state here if needed
     }
   };
 
   const handleEditChange = (e, gameId) => {
     const { name, value, type, checked } = e.target;
+    
+    // Map input 'price' field back to 'rentalPrice' key, and 'copies' to 'total_available' key
+    let fieldName = name;
+    if (name === 'price') fieldName = 'rentalPrice';
+    if (name === 'copies') fieldName = 'total_available';
+    if (name === 'genre') fieldName = 'platform_name';
+    
     setGames((prev) =>
       prev.map((game) =>
-        game.id === gameId
-          ? { ...game, [name]: type === "checkbox" ? checked : value }
+        // Use game_id for the lookup
+        game.game_id === gameId
+          ? { ...game, [fieldName]: type === "checkbox" ? checked : value }
           : game
       )
     );
@@ -42,7 +51,8 @@ function EmployeeDash() {
 
   const saveGame = async (game) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/games/${game.id}`, {
+      // Use game_id in the URL
+      const res = await fetch(`http://localhost:5001/api/games/${game.game_id}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -62,7 +72,7 @@ function EmployeeDash() {
 
   const deleteGame = async (gameId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/games/${gameId}`, {
+      const res = await fetch(`http://localhost:5001/api/games/${gameId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -77,15 +87,22 @@ function EmployeeDash() {
   const addGame = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/games", {
+      const res = await fetch("http://localhost:5001/api/games", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newGame),
+        // NOTE: The backend needs to be able to process these keys now
+        body: JSON.stringify({
+            title: newGame.title,
+            platform_name: newGame.platform_name, // Mapped to API key
+            total_available: newGame.total_available, // Mapped to API key
+            rentalPrice: newGame.rentalPrice, // Mapped to API key
+            // The backend must also handle the insertion into Game and Inventory tables
+        }),
       });
 
       if (res.ok) {
-        setNewGame({ title: "", genre: "", availability: true, copies: 1, price: 0 });
+        setNewGame({ title: "", platform_name: "", availability: true, total_available: 1, rentalPrice: 0 });
         fetchGames();
       } else {
         console.error("Failed to add game");
@@ -111,26 +128,29 @@ function EmployeeDash() {
         />
         <input
           type="text"
-          placeholder="Genre"
-          value={newGame.genre}
-          onChange={(e) => setNewGame({ ...newGame, genre: e.target.value })}
+          placeholder="Platform Name (Genre)"
+          // Use platform_name key
+          value={newGame.platform_name}
+          onChange={(e) => setNewGame({ ...newGame, platform_name: e.target.value })}
           required
         />
         <input
           type="number"
-          placeholder="Copies"
+          placeholder="Copies (Total Available)"
           min="1"
-          value={newGame.copies}
-          onChange={(e) => setNewGame({ ...newGame, copies: Number(e.target.value) })}
+          // Use total_available key
+          value={newGame.total_available}
+          onChange={(e) => setNewGame({ ...newGame, total_available: Number(e.target.value) })}
           required
         />
         <input
           type="number"
-          placeholder="Price"
+          placeholder="Rental Price"
           min="0"
           step="0.01"
-          value={newGame.price}
-          onChange={(e) => setNewGame({ ...newGame, price: Number(e.target.value) })}
+          // Use rentalPrice key
+          value={newGame.rentalPrice}
+          onChange={(e) => setNewGame({ ...newGame, rentalPrice: Number(e.target.value) })}
           required
         />
         <label>
@@ -150,8 +170,8 @@ function EmployeeDash() {
         <thead>
           <tr>
             <th>Title</th>
-            <th>Genre</th>
-            <th>Copies</th>
+            <th>Platform Name</th>
+            <th>Copies Available</th>
             <th>Price</th>
             <th>Available</th>
             <th>Actions</th>
@@ -159,78 +179,84 @@ function EmployeeDash() {
         </thead>
         <tbody>
           {games.map((game) => (
-            <tr key={game.id}>
+            // Use game_id for key and editing
+            <tr key={game.game_id}>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <input
                     name="title"
                     value={game.title}
-                    onChange={(e) => handleEditChange(e, game.id)}
+                    onChange={(e) => handleEditChange(e, game.game_id)}
                   />
                 ) : (
                   game.title
                 )}
               </td>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <input
-                    name="genre"
-                    value={game.genre}
-                    onChange={(e) => handleEditChange(e, game.id)}
+                    name="platform_name" // Use correct key
+                    value={game.platform_name}
+                    onChange={(e) => handleEditChange(e, game.game_id)}
                   />
                 ) : (
-                  game.genre
+                  // Use correct key
+                  game.platform_name 
                 )}
               </td>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <input
                     type="number"
                     name="copies"
-                    value={game.copies}
-                    onChange={(e) => handleEditChange(e, game.id)}
+                    // Use total_available key for copies count
+                    value={game.total_available} 
+                    onChange={(e) => handleEditChange(e, game.game_id)}
                   />
                 ) : (
-                  game.copies
+                  // Use total_available key
+                  game.total_available 
                 )}
               </td>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <input
                     type="number"
                     name="price"
                     step="0.01"
-                    value={game.price}
-                    onChange={(e) => handleEditChange(e, game.id)}
+                    // Use rentalPrice key
+                    value={game.rentalPrice} 
+                    onChange={(e) => handleEditChange(e, game.game_id)}
                   />
                 ) : (
-                  `$${game.price.toFixed(2)}`
+                  // Use rentalPrice and add safe check
+                  `$${game.rentalPrice ? Number(game.rentalPrice).toFixed(2) : 'N/A'}`
                 )}
               </td>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <input
                     type="checkbox"
                     name="availability"
-                    checked={game.availability}
-                    onChange={(e) => handleEditChange(e, game.id)}
+                    checked={game.available} // Use API's 'available' boolean
+                    onChange={(e) => handleEditChange(e, game.game_id)}
                   />
-                ) : game.availability ? (
+                ) : game.available ? ( // Use API's 'available' boolean
                   "Yes"
                 ) : (
                   "No"
                 )}
               </td>
               <td>
-                {editingGameId === game.id ? (
+                {editingGameId === game.game_id ? (
                   <>
                     <button onClick={() => saveGame(game)}>Save</button>
                     <button onClick={() => setEditingGameId(null)}>Cancel</button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => setEditingGameId(game.id)}>Edit</button>
-                    <button onClick={() => deleteGame(game.id)}>Delete</button>
+                    <button onClick={() => setEditingGameId(game.game_id)}>Edit</button>
+                    <button onClick={() => deleteGame(game.game_id)}>Delete</button>
                   </>
                 )}
               </td>
