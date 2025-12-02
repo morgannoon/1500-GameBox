@@ -5,8 +5,8 @@ import json
 BASE_URL = 'http://localhost:5000/api'
 
 # Test Credentials
-TEST_EMAIL = "alice@example.com"
-TEST_PASSWORD = "password123"
+TEST_EMAIL = "alice.johnson@example.com"
+TEST_PASSWORD = "pass123"
 
 # --- Test Login ---
 print("--- Testing Login ---")
