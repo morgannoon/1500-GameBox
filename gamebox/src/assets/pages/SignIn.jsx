@@ -12,9 +12,10 @@ function SignIn() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // --- CORRECTED AUTH CHECK ENDPOINTS ---
         const endpoint = isEmployee
-          ? "http://localhost:5001/api/check-auth-employee"
-          : "http://localhost:5001/api/check-auth";
+          ? "http://localhost:5001/api/check-auth-employee" // Employee check
+          : "http://localhost:5001/api/check-auth"; // User check (corrected from /api/)
 
         const response = await fetch(endpoint, {
           method: "GET",
@@ -36,9 +37,10 @@ function SignIn() {
     setError("");
 
     try {
+      // --- CORRECTED LOGIN ENDPOINTS ---
       const endpoint = isEmployee
-        ? "http://localhost:5001/api/login"
-        : "http://localhost:5001/api/login";
+        ? "http://localhost:5001/api/login-employee" // Employee login
+        : "http://localhost:5001/api/sign-in"; // User login (changed from /api/login)
 
       const response = await fetch(endpoint, {
         method: "POST",
