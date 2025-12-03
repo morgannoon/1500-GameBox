@@ -5,6 +5,9 @@ import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import traceback
+
+
 
 app = Flask(__name__)
 
@@ -59,6 +62,48 @@ def require_auth(func):
         return func(*args, **kwargs)
     return wrapper
 
+def require_employee(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].replace("Bearer ", "")
+
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+
+        try:
+            payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+
+            # Must contain employee_id
+            if "employee_id" not in payload:
+                return jsonify({"error": "Employee token required"}), 403
+
+            request.employee = payload
+        except Exception as e:
+            print("Employee token error:", e)
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def get_employee_from_token():
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header or "Bearer " not in auth_header:
+        return None
+
+    try:
+        token = auth_header.split(" ")[1]
+        decoded = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return decoded
+    except Exception as e:
+        print("Token decode error:", e)
+        return None
+
 # --------------------------
 #         SIGN IN (User)
 # --------------------------
@@ -92,43 +137,9 @@ def sign_in():
         print("Login error:", e)
         return jsonify({"error": "Internal error"}), 500
 
-# --------------------------
-#         SIGN IN (Employee)
-# --------------------------
-@app.route("/api/login-employee", methods=["POST"])
-def login_employee():
-    try:
-        data = request.get_json()
-        email = data.get("email")
-        password = data.get("password")
-
-        if not email or not password:
-            return jsonify({"error": "Missing email or password"}), 400
-
-        con = get_db_connection()
-        cursor = con.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Employee WHERE business_email = %s", (email,))
-        employee = cursor.fetchone()
-        cursor.close()
-        con.close()
-
-        if not employee:
-            return jsonify({"error": "Invalid email or password"}), 401
-
-        if not check_password_hash(employee["password"], password):
-            return jsonify({"error": "Invalid email or password"}), 401
-
-        # TODO: Generate JWT here
-        token = "FAKE_JWT_FOR_NOW"
-
-        return jsonify({"token": token, "employee_id": employee["employee_id"]}), 200
-
-    except Exception as e:
-        print("Login error:", e)
-        return jsonify({"error": "Server error during login"}), 500
 
 # --------------------------
-#       CHECK AUTH
+#       CHECK AUTH user
 # --------------------------
 @app.route('/api/check-auth', methods=['GET'])
 @require_auth
@@ -139,6 +150,7 @@ def check_auth():
         "customer_id": user["customer_id"],
         "email": user["email"]
     }), 200
+
 
 # --------------------------
 #       GAMES
@@ -378,35 +390,66 @@ def game_reviews(game_id):
 
 
 # --------------------------
-#       ADD/UPDATE/DELETE GAME
+#       GET/ADD/UPDATE/DELETE GAME EMPLOYEE
 # --------------------------
+@app.route("/api/employee/games", methods=["GET"])
+def get_employee_games():
+    employee = get_employee_from_token()
+
+    # if no token → return empty list (so React doesn't crash)
+    if not employee:
+        return jsonify([]), 200    
+
+    try:
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Games")  # your table name
+        games = cursor.fetchall()
+        cursor.close()
+        con.close()
+
+        return jsonify(games), 200
+
+    except Exception as e:
+        print("Games fetch error:", e)
+        return jsonify([]), 200
+
+
 @app.route("/api/games", methods=["POST"])
 def add_game():
     try:
         data = request.get_json()
         title = data.get("title")
         platform_name = data.get("platform_name")
-        total_available = data.get("total_available", 1)
-        rentalPrice = data.get("rentalPrice", 0.0)
-        available = data.get("availability", True)
+        price = data.get("price", 0.0)  # renamed from rentalPrice
+        availability = data.get("availability", True)  # matches table
 
         if not title or not platform_name:
             return jsonify({"error": "Title and Platform Name are required"}), 400
 
         con = get_db_connection()
         cursor = con.cursor()
+
+        # Convert availability to 1/0 for MySQL
+        availability_int = 1 if availability else 0
+
         cursor.execute("""
-            INSERT INTO Game (title, platform_name, total_available, rentalPrice, available)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (title, platform_name, total_available, rentalPrice, available))
+            INSERT INTO Game (title, platform_name, price, availability)
+            VALUES (%s, %s, %s, %s)
+        """, (title, platform_name, price, availability_int))
+
         con.commit()
         game_id = cursor.lastrowid
         cursor.close()
         con.close()
+
         return jsonify({"message": "Game added", "game_id": game_id}), 201
+
     except Exception as e:
+        import traceback
         print("Add game error:", e)
-        return jsonify({"error": "Failed to add game"}), 500
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["PUT"])
 def update_game(game_id):
@@ -414,24 +457,35 @@ def update_game(game_id):
         data = request.get_json()
         title = data.get("title")
         platform_name = data.get("platform_name")
-        total_available = data.get("total_available")
-        rentalPrice = data.get("rentalPrice")
-        available = data.get("available")
+        price = data.get("price")  # renamed from rentalPrice
+        availability = data.get("availability")  # renamed from available
 
         con = get_db_connection()
         cursor = con.cursor()
+
+        # Convert availability to 1/0 for MySQL
+        availability_int = 1 if availability else 0
+
         cursor.execute("""
             UPDATE Game
-            SET title=%s, platform_name=%s, total_available=%s, rentalPrice=%s, available=%s
+            SET title=%s,
+                platform_name=%s,
+                price=%s,
+                availability=%s
             WHERE game_id=%s
-        """, (title, platform_name, total_available, rentalPrice, available, game_id))
+        """, (title, platform_name, price, availability_int, game_id))
+
         con.commit()
         cursor.close()
         con.close()
+
         return jsonify({"message": "Game updated"}), 200
+
     except Exception as e:
+        import traceback
         print("Update game error:", e)
-        return jsonify({"error": "Failed to update game"}), 500
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["DELETE"])
 def delete_game(game_id):
@@ -446,6 +500,150 @@ def delete_game(game_id):
     except Exception as e:
         print("Delete game error:", e)
         return jsonify({"error": "Failed to delete game"}), 500
+
+
+# --------------------------
+# Employee get User's Rentals
+# --------------------------
+@app.route("/api/employee/current-rentals", methods=["GET"])
+@require_employee  # JWT check for employee
+def get_current_rentals_employee():
+    # Get email from query parameters
+    customer_email = request.args.get("email")
+    if not customer_email:
+        return jsonify({"error": "Customer email query parameter is required"}), 400
+
+    try:
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+
+        # Fetch rentals for the given customer email
+        cursor.execute("""
+            SELECT 
+                r.reserve_id, 
+                r.status, 
+                c.email AS user_email, 
+                g.title, 
+                r.rental_date, 
+                r.return_date, 
+                s.address AS store_address
+            FROM Reserve r
+            JOIN Customer c ON r.customer_id = c.customer_id
+            JOIN Game g ON r.game_id = g.game_id
+            JOIN Store s ON r.store_id = s.store_id
+            WHERE c.email = %s
+        """, (customer_email,))
+
+        rentals = cursor.fetchall()
+        cursor.close()
+        con.close()
+
+        return jsonify(rentals), 200
+
+    except Exception as e:
+        print("Error fetching current rentals (employee):", e)
+        traceback.print_exc()  # Prints full stack trace for debugging
+        return jsonify({"error": "Failed to fetch rentals"}), 500
+
+
+@app.route("/api/rentals/<int:rental_id>", methods=["PUT"])
+@require_employee  # Or require_auth if both employees and users can update
+def update_rental_status(rental_id):
+    try:
+        data = request.get_json()
+        new_status = data.get("status")
+
+        if not new_status:
+            return jsonify({"error": "Status is required"}), 400
+
+        # Optional: validate allowed statuses
+        allowed_statuses = ["waiting_for_pickup", "picked_up", "returned", "late"]
+        if new_status not in allowed_statuses:
+            return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
+
+        con = get_db_connection()
+        cursor = con.cursor()
+
+        # Update the rental status
+        cursor.execute(
+            "UPDATE Reserve SET status = %s WHERE rental_id = %s",
+            (new_status, rental_id)
+        )
+        con.commit()
+
+        # Check if any row was updated
+        if cursor.rowcount == 0:
+            cursor.close()
+            con.close()
+            return jsonify({"error": "Rental not found"}), 404
+
+        cursor.close()
+        con.close()
+
+        return jsonify({"message": "Rental status updated successfully"}), 200
+
+    except Exception as e:
+        import traceback
+        print("Error updating rental status:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Failed to update rental status"}), 500
+
+
+
+# --------------------------
+#       CHECK AUTH Employee
+# --------------------------
+
+@app.route('/api/check-auth-employee', methods=['GET'])
+def check_auth_employee():
+    employee = get_employee_from_token()
+    if not employee:
+        return jsonify({"authenticated": False, "error": "Unauthorized"}), 401
+    
+    # Return employee info if authenticated
+    return jsonify({
+        "authenticated": True,
+        "employee_id": employee.get("employee_id"),
+        "store_id": employee.get("store_id"),
+        "role": employee.get("role")
+    })
+
+# --------------------------
+#         SIGN IN (Employee)
+# --------------------------
+@app.route("/api/login-employee", methods=["POST"])
+def login_employee():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        if not email or not password:
+            return jsonify({"error": "Missing email or password"}), 400
+
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Employee WHERE business_email = %s", (email,))
+        employee = cursor.fetchone()
+        cursor.close()
+        con.close()
+
+        if not employee or not check_password_hash(employee["password"], password):
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        # Generate JWT for employee
+        payload = {
+            "employee_id": employee["employee_id"],
+            "email": employee["business_email"],
+            "exp": datetime.utcnow() + timedelta(hours=12)
+        }
+        token = jwt.encode(payload, SECRET, algorithm="HS256")
+
+        return jsonify({"token": token, "employee_id": employee["employee_id"]}), 200
+
+    except Exception as e:
+        print("Employee login error:", e)
+        return jsonify({"error": "Server error during login"}), 500
 
 
 # --------------------------

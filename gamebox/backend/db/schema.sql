@@ -38,7 +38,6 @@ CREATE TABLE Game (
     release_year YEAR,
     maturity_rating VARCHAR(10),
     genre VARCHAR(255),
-    image_url VARCHAR(500),
     description VARCHAR(1000)
 );
 

@@ -16,58 +16,86 @@
   margin-bottom: 20px;
 }
 
-/* --- Add Game Form --- */
+/* ================================================================= */
+/*                        FIXED + IMPROVED GAME FORM                  */
+/* ================================================================= */
+
 .add-game-form {
-  background-color: rgba(101, 98, 223, 0.2);
+  background-color: rgba(101, 98, 223, 0.25);
   padding: 20px;
-  border-radius: 15px;
+  border-radius: 16px;
   margin-bottom: 30px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
 }
 
 .add-game-form h2 {
-  width: 100%;
+  grid-column: 1 / -1;
   margin-bottom: 10px;
   color: #fafafa;
 }
 
+/* text + number inputs */
 .add-game-form input[type="text"],
-.add-game-form input[type="number"],
-.add-game-form input[type="checkbox"] {
-  padding: 8px 10px;
-  border-radius: 8px;
+.add-game-form input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
   border: 1px solid #6562df;
   background-color: #1b1b2f;
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.15s;
 }
 
+.add-game-form input[type="text"]:focus,
+.add-game-form input[type="number"]:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+}
+
+/* checkbox + label */
 .add-game-form label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   font-size: 0.9rem;
   color: white;
+  font-weight: 500;
 }
 
+.add-game-form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #6562df;
+  cursor: pointer;
+}
+
+/* submit button */
 .add-game-form button {
+  grid-column: 1 / -1;
   background-color: #6562df;
   color: white;
   border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
+  border-radius: 12px;
+  padding: 12px 20px;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   transition: 0.2s;
+  margin-top: 10px;
 }
 
 .add-game-form button:hover {
   background-color: #4a48c7;
 }
 
-/* --- Games Table --- */
+/* ================================================================= */
+/*                           GAMES TABLE                              */
+/* ================================================================= */
+
 .games-table {
   width: 100%;
   border-collapse: collapse;
@@ -116,7 +144,7 @@
 }
 
 .games-table .save-btn {
-  background-color: #10b981; /* green */
+  background-color: #10b981;
 }
 
 .games-table .save-btn:hover {
@@ -124,7 +152,7 @@
 }
 
 .games-table .cancel-btn {
-  background-color: #fbbf24; /* yellow */
+  background-color: #fbbf24;
 }
 
 .games-table .cancel-btn:hover {
@@ -133,19 +161,22 @@
 
 /* --- Available Status --- */
 .status-available {
-  color: #4ade80; /* green */
+  color: #4ade80;
   font-weight: 600;
 }
 
 .status-unavailable {
-  color: #f87171; /* red */
+  color: #f87171;
   font-weight: 600;
 }
 
-/* --- Responsive --- */
+/* ================================================================= */
+/*                           RESPONSIVE                               */
+/* ================================================================= */
+
 @media (max-width: 768px) {
   .add-game-form {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .games-table th,
