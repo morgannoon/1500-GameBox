@@ -117,52 +117,75 @@ function EmployeeDash() {
       <h1>Employee Dashboard</h1>
 
       {/* Add New Game */}
-      <form onSubmit={addGame} className="add-game-form">
-        <h2>Add New Game</h2>
-        <input
-          type="text"
-          placeholder="Title"
-          value={newGame.title}
-          onChange={(e) => setNewGame({ ...newGame, title: e.target.value })}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Platform Name (Genre)"
-          // Use platform_name key
-          value={newGame.platform_name}
-          onChange={(e) => setNewGame({ ...newGame, platform_name: e.target.value })}
-          required
-        />
-        <input
-          type="number"
-          placeholder="Copies (Total Available)"
-          min="1"
-          // Use total_available key
-          value={newGame.total_available}
-          onChange={(e) => setNewGame({ ...newGame, total_available: Number(e.target.value) })}
-          required
-        />
-        <input
-          type="number"
-          placeholder="Rental Price"
-          min="0"
-          step="0.01"
-          // Use rentalPrice key
-          value={newGame.rentalPrice}
-          onChange={(e) => setNewGame({ ...newGame, rentalPrice: Number(e.target.value) })}
-          required
-        />
-        <label>
-          Available: 
-          <input
-            type="checkbox"
-            checked={newGame.availability}
-            onChange={(e) => setNewGame({ ...newGame, availability: e.target.checked })}
-          />
-        </label>
-        <button type="submit">Add Game</button>
-      </form>
+<form onSubmit={addGame} className="add-game-form">
+  <h2>Add New Game</h2>
+
+  <div className="form-group">
+    <label htmlFor="title">Title:</label>
+    <input
+      id="title"
+      type="text"
+      placeholder="Enter game title"
+      value={newGame.title}
+      onChange={(e) => setNewGame({ ...newGame, title: e.target.value })}
+      required
+    />
+  </div>
+
+  <div className="form-group">
+    <label htmlFor="platform_name">Platform Name / Genre:</label>
+    <input
+      id="platform_name"
+      type="text"
+      placeholder="Enter platform or genre"
+      value={newGame.platform_name}
+      onChange={(e) => setNewGame({ ...newGame, platform_name: e.target.value })}
+      required
+    />
+  </div>
+
+  <div className="form-group">
+    <label htmlFor="total_available">Copies Available:</label>
+    <input
+      id="total_available"
+      type="number"
+      placeholder="Enter number of copies"
+      min="1"
+      value={newGame.total_available}
+      onChange={(e) => setNewGame({ ...newGame, total_available: Number(e.target.value) })}
+      required
+    />
+  </div>
+
+  <div className="form-group">
+    <label htmlFor="rentalPrice">Rental Price:</label>
+    <input
+      id="rentalPrice"
+      type="number"
+      placeholder="Enter rental price"
+      min="0"
+      step="0.01"
+      value={newGame.rentalPrice}
+      onChange={(e) => setNewGame({ ...newGame, rentalPrice: Number(e.target.value) })}
+      required
+    />
+  </div>
+
+  <div className="form-group">
+    <label htmlFor="availability">
+      Available:
+      <input
+        id="availability"
+        type="checkbox"
+        checked={newGame.availability}
+        onChange={(e) => setNewGame({ ...newGame, availability: e.target.checked })}
+      />
+    </label>
+  </div>
+
+  <button type="submit">Add Game</button>
+</form>
+
 
       {/* Games Table */}
       <h2>Inventory</h2>

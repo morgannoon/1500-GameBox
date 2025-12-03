@@ -1,154 +1,156 @@
 /* EmployeeDash.css */
 
-.employee-dash-page {
-    min-height: 100vh;
-    background: linear-gradient(to bottom, #0a0a0a, #1b1b2f);
-    padding: 20px;
-    font-family: 'Orbitron', sans-serif;
-  }
-  
-  /* Header */
-  .employee-dash-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-  }
-  
-  .employee-dash-header h1 {
-    font-size: 1.8rem;
-    color: #a855f7;
-  }
-  
-  /* Add Game Form */
+/* --- Page Layout --- */
+.employee-dash {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0a0a0a, #1b1b2f);
+  padding: 20px;
+  font-family: 'Orbitron', sans-serif;
+  color: white;
+}
+
+/* --- Header --- */
+.employee-dash h1 {
+  font-size: 2rem;
+  color: #a855f7;
+  margin-bottom: 20px;
+}
+
+/* --- Add Game Form --- */
+.add-game-form {
+  background-color: rgba(101, 98, 223, 0.2);
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.add-game-form h2 {
+  width: 100%;
+  margin-bottom: 10px;
+  color: #fafafa;
+}
+
+.add-game-form input[type="text"],
+.add-game-form input[type="number"],
+.add-game-form input[type="checkbox"] {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #6562df;
+  background-color: #1b1b2f;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.add-game-form label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: white;
+}
+
+.add-game-form button {
+  background-color: #6562df;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.add-game-form button:hover {
+  background-color: #4a48c7;
+}
+
+/* --- Games Table --- */
+.games-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 0 0.5rem rgba(168, 85, 247, 0.4);
+}
+
+.games-table th,
+.games-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  color: white;
+}
+
+.games-table th {
+  background-color: rgba(101, 98, 223, 0.6);
+}
+
+.games-table tr:nth-child(even) {
+  background-color: rgba(101, 98, 223, 0.1);
+}
+
+/* --- Action Buttons --- */
+.games-table button {
+  margin-right: 5px;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.85rem;
+  color: white;
+  background-color: #6562df;
+}
+
+.games-table button:hover {
+  opacity: 0.85;
+}
+
+.games-table .delete-btn {
+  background-color: #fa5000;
+}
+
+.games-table .delete-btn:hover {
+  background-color: #e04a00;
+}
+
+.games-table .save-btn {
+  background-color: #10b981; /* green */
+}
+
+.games-table .save-btn:hover {
+  background-color: #059669;
+}
+
+.games-table .cancel-btn {
+  background-color: #fbbf24; /* yellow */
+}
+
+.games-table .cancel-btn:hover {
+  background-color: #f59e0b;
+}
+
+/* --- Available Status --- */
+.status-available {
+  color: #4ade80; /* green */
+  font-weight: 600;
+}
+
+.status-unavailable {
+  color: #f87171; /* red */
+  font-weight: 600;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
   .add-game-form {
-    background-color: rgba(101, 98, 223, 0.2);
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 30px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
   }
-  
-  .add-game-form input[type="text"],
-  .add-game-form input[type="number"],
-  .add-game-form input[type="checkbox"] {
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid #6562df;
-    background-color: #1b1b2f;
-    color: white;
-    font-size: 0.9rem;
-  }
-  
-  .add-game-form label {
-    display: flex;
-    align-items: center;
-    color: white;
-    font-size: 0.9rem;
-  }
-  
-  .add-game-form button {
-    background-color: #6562df;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 16px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: 0.2s;
-  }
-  
-  .add-game-form button:hover {
-    background-color: #4a48c7;
-  }
-  
-  /* Inventory Table */
-  .games-table {
-    width: 100%;
-    border-collapse: collapse;
-    box-shadow: 0 0 0.5rem rgba(168, 85, 247, 0.4);
-  }
-  
+
   .games-table th,
   .games-table td {
-    text-align: left;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    color: white;
-  }
-  
-  .games-table th {
-    background-color: rgba(101, 98, 223, 0.6);
-  }
-  
-  .games-table tr:nth-child(even) {
-    background-color: rgba(101, 98, 223, 0.1);
-  }
-  
-  /* Status indicators */
-  .status-available {
-    color: #4ade80; /* green */
-    font-weight: 600;
-  }
-  
-  .status-unavailable {
-    color: #f87171; /* red */
-    font-weight: 600;
-  }
-  
-  /* Action Buttons */
-  .games-table button {
-    margin-right: 5px;
-    background-color: #6562df;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 5px 10px;
-    cursor: pointer;
-    transition: 0.2s;
     font-size: 0.85rem;
+    padding: 8px;
   }
-  
-  .games-table button:hover {
-    background-color: #4a48c7;
-  }
-  
-  .games-table .delete-btn {
-    background-color: #fa5000;
-  }
-  
-  .games-table .delete-btn:hover {
-    background-color: #e04a00;
-  }
-  
-  .games-table .save-btn {
-    background-color: #10b981; /* green for save */
-  }
-  
-  .games-table .save-btn:hover {
-    background-color: #059669;
-  }
-  
-  .games-table .cancel-btn {
-    background-color: #fbbf24; /* yellow for cancel */
-  }
-  
-  .games-table .cancel-btn:hover {
-    background-color: #f59e0b;
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .add-game-form {
-      flex-direction: column;
-    }
-  
-    .games-table th,
-    .games-table td {
-      font-size: 0.85rem;
-      padding: 8px;
-    }
-  }
-  
+}

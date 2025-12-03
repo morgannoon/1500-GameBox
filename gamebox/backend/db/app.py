@@ -15,7 +15,7 @@ SECRET = "your-secret-key-change-this-in-production"
 CORS(app,
      origins=["http://localhost:5173", "http://127.0.0.1:5173"],
      supports_credentials=True,
-     methods=["GET", "POST", "OPTIONS"],
+     methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
      allow_headers=["Content-Type", "Authorization"]
 )
 
@@ -91,6 +91,41 @@ def sign_in():
     except Exception as e:
         print("Login error:", e)
         return jsonify({"error": "Internal error"}), 500
+
+# --------------------------
+#         SIGN IN (Employee)
+# --------------------------
+@app.route("/api/login-employee", methods=["POST"])
+def login_employee():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        if not email or not password:
+            return jsonify({"error": "Missing email or password"}), 400
+
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Employee WHERE business_email = %s", (email,))
+        employee = cursor.fetchone()
+        cursor.close()
+        con.close()
+
+        if not employee:
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        if not check_password_hash(employee["password"], password):
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        # TODO: Generate JWT here
+        token = "FAKE_JWT_FOR_NOW"
+
+        return jsonify({"token": token, "employee_id": employee["employee_id"]}), 200
+
+    except Exception as e:
+        print("Login error:", e)
+        return jsonify({"error": "Server error during login"}), 500
 
 # --------------------------
 #       CHECK AUTH
@@ -341,6 +376,76 @@ def game_reviews(game_id):
         cursor.close()
         con.close()
 
+
+# --------------------------
+#       ADD/UPDATE/DELETE GAME
+# --------------------------
+@app.route("/api/games", methods=["POST"])
+def add_game():
+    try:
+        data = request.get_json()
+        title = data.get("title")
+        platform_name = data.get("platform_name")
+        total_available = data.get("total_available", 1)
+        rentalPrice = data.get("rentalPrice", 0.0)
+        available = data.get("availability", True)
+
+        if not title or not platform_name:
+            return jsonify({"error": "Title and Platform Name are required"}), 400
+
+        con = get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("""
+            INSERT INTO Game (title, platform_name, total_available, rentalPrice, available)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (title, platform_name, total_available, rentalPrice, available))
+        con.commit()
+        game_id = cursor.lastrowid
+        cursor.close()
+        con.close()
+        return jsonify({"message": "Game added", "game_id": game_id}), 201
+    except Exception as e:
+        print("Add game error:", e)
+        return jsonify({"error": "Failed to add game"}), 500
+
+@app.route("/api/games/<int:game_id>", methods=["PUT"])
+def update_game(game_id):
+    try:
+        data = request.get_json()
+        title = data.get("title")
+        platform_name = data.get("platform_name")
+        total_available = data.get("total_available")
+        rentalPrice = data.get("rentalPrice")
+        available = data.get("available")
+
+        con = get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("""
+            UPDATE Game
+            SET title=%s, platform_name=%s, total_available=%s, rentalPrice=%s, available=%s
+            WHERE game_id=%s
+        """, (title, platform_name, total_available, rentalPrice, available, game_id))
+        con.commit()
+        cursor.close()
+        con.close()
+        return jsonify({"message": "Game updated"}), 200
+    except Exception as e:
+        print("Update game error:", e)
+        return jsonify({"error": "Failed to update game"}), 500
+
+@app.route("/api/games/<int:game_id>", methods=["DELETE"])
+def delete_game(game_id):
+    try:
+        con = get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM Game WHERE game_id=%s", (game_id,))
+        con.commit()
+        cursor.close()
+        con.close()
+        return jsonify({"message": "Game deleted"}), 200
+    except Exception as e:
+        print("Delete game error:", e)
+        return jsonify({"error": "Failed to delete game"}), 500
 
 
 # --------------------------
