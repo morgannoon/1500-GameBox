@@ -41,6 +41,10 @@ def create_token(user):
 def require_auth(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        if request.method == "OPTIONS":
+            # Allow preflight requests to pass
+            return "", 200
+
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             return jsonify({"error": "Missing or invalid Authorization header"}), 401
@@ -203,6 +207,141 @@ def get_inventory_by_store(store_id, inventory_id):
     except Exception as e:
         print("Error fetching inventory:", e)
         return jsonify({"error": "Could not fetch inventory"}), 500
+
+
+# --------------------------
+#   CURRENT RENTALS
+# --------------------------
+# --------------------------
+@app.route("/api/current-rentals", methods=["GET", "OPTIONS"])
+@require_auth
+def current_rentals():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        customer_id = request.user["customer_id"]
+
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                g.game_id, 
+                g.title, 
+                g.price AS rentalPrice,  -- rename for frontend
+                r.rental_date, 
+                r.return_date, 
+                s.address AS store_address, 
+                r.status
+            FROM Reserve r
+            JOIN Game g ON r.game_id = g.game_id
+            JOIN Store s ON r.store_id = s.store_id
+            WHERE r.customer_id = %s AND r.status IN ('waiting_for_pickup', 'picked_up')
+        """, (customer_id,))
+        rentals = cursor.fetchall()
+        cursor.close()
+        con.close()
+
+        return jsonify(rentals), 200
+    except Exception as e:
+        print("Current rentals error:", e)
+        return jsonify({"error": "Failed to fetch current rentals"}), 500
+
+
+# --------------------------
+#   RENTAL HISTORY
+# --------------------------
+@app.route("/api/rental-history", methods=["GET", "OPTIONS"])
+@require_auth
+def rental_history():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        customer_id = request.user["customer_id"]
+
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                g.game_id, 
+                g.title, 
+                g.price AS rentalPrice,  -- include price for frontend
+                r.rental_date, 
+                r.return_date, 
+                s.address AS store_address, 
+                r.status
+            FROM Reserve r
+            JOIN Game g ON r.game_id = g.game_id
+            JOIN Store s ON r.store_id = s.store_id
+            WHERE r.customer_id = %s AND r.status = 'returned'
+            ORDER BY r.return_date DESC
+        """, (customer_id,))
+        history = cursor.fetchall()
+        cursor.close()
+        con.close()
+
+        return jsonify(history), 200
+    except Exception as e:
+        print("Rental history error:", e)
+        return jsonify({"error": "Failed to fetch rental history"}), 500
+
+# --------------------------
+#         REVIEWS
+# --------------------------
+@app.route('/api/games/<int:game_id>/reviews', methods=['GET', 'POST', 'OPTIONS'])
+@require_auth  # ensures we have request.user with customer_id
+def game_reviews(game_id):
+    if request.method == "OPTIONS":
+        return "", 200
+
+    con = get_db_connection()
+    cursor = con.cursor(dictionary=True)
+
+    try:
+        if request.method == 'GET':
+            # Fetch reviews for the game
+            cursor.execute("""
+                SELECT r.review_id, r.rating, r.review, r.creation_date, r.customer_id, c.name AS customer_name
+                FROM Reviews r
+                JOIN Customer c ON r.customer_id = c.customer_id
+                WHERE r.game_id = %s
+                ORDER BY r.creation_date DESC
+            """, (game_id,))
+            reviews = cursor.fetchall()
+            return jsonify(reviews), 200
+
+        elif request.method == 'POST':
+            data = request.get_json()
+            rating = data.get('rating')
+            review_text = data.get('review', '')
+            customer_id = request.user["customer_id"]
+
+            if not rating:
+                return jsonify({"error": "Rating is required"}), 400
+
+            cursor.execute("""
+                INSERT INTO Reviews (game_id, customer_id, rating, review, creation_date)
+                VALUES (%s, %s, %s, %s, CURDATE())
+            """, (game_id, customer_id, rating, review_text))
+            con.commit()
+            review_id = cursor.lastrowid
+
+            # Return the newly created review
+            cursor.execute("SELECT * FROM Reviews WHERE review_id = %s", (review_id,))
+            new_review = cursor.fetchone()
+
+            return jsonify(new_review), 201
+
+    except Exception as e:
+        print("Game reviews error:", e)
+        return jsonify({"error": "Could not process reviews"}), 500
+
+    finally:
+        cursor.close()
+        con.close()
+
+
 
 # --------------------------
 #       RUN SERVER

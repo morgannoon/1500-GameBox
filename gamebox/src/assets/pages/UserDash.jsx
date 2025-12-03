@@ -1,68 +1,81 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/UserDash.css";
+import { useNavigate } from "react-router-dom";
 
 function UserDash() {
   const navigate = useNavigate();
+  const token = localStorage.getItem("token"); // JWT stored on login
 
   const [currentRentals, setCurrentRentals] = useState([]);
   const [rentalHistory, setRentalHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadingCurrent, setLoadingCurrent] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [errorCurrent, setErrorCurrent] = useState(null);
+  const [errorHistory, setErrorHistory] = useState(null);
 
-  // Navigation
-  const handleLogout = () => navigate("/signin");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/signin");
+  };
   const goHome = () => navigate("/home");
 
-  // Safely format rental price
   const formatPrice = (value) => {
     const num = Number(value);
     return !isNaN(num) ? `$${num.toFixed(2)}` : "N/A";
   };
 
-  // Fetch rentals from backend
-  useEffect(() => {
-    const fetchRentals = async () => {
-      setLoading(true);
-      setError(null);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(); // e.g., 12/3/2025
+  };
 
-      try {
-        const [currentRes, historyRes] = await Promise.all([
-          fetch("http://localhost:5001/api/current-rentals", { credentials: "include" }),
-          fetch("http://localhost:5001/api/rental-history", { credentials: "include" }),
-        ]);
-
-        if (currentRes.ok && historyRes.ok) {
-          const currentData = await currentRes.json();
-          const historyData = await historyRes.json();
-
-          // Ensure rentalPrice is numeric
-          setCurrentRentals(
-            currentData.map((r) => ({ ...r, rentalPrice: Number(r.rentalPrice) }))
-          );
-          setRentalHistory(
-            historyData.map((r) => ({ ...r, rentalPrice: Number(r.rentalPrice) }))
-          );
-        } else {
-          setError("Failed to load rental data");
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Network error while fetching rentals");
-      } finally {
-        setLoading(false);
+  const fetchData = async (url, setData, setError, setLoading) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`Failed to fetch ${url}:`, text);
+        setError(`Failed to load data`);
+        setData([]);
+        return;
       }
-    };
+      const data = await res.json();
+      setData(data);
+    } catch (err) {
+      console.error(`Network error fetching ${url}:`, err);
+      setError("Network error while fetching data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchRentals();
-  }, []);
+  useEffect(() => {
+    fetchData(
+      "http://localhost:5001/api/current-rentals",
+      setCurrentRentals,
+      setErrorCurrent,
+      setLoadingCurrent
+    );
+    fetchData(
+      "http://localhost:5001/api/rental-history",
+      setRentalHistory,
+      setErrorHistory,
+      setLoadingHistory
+    );
+  }, [token]);
 
-  // Determine status class
   const getStatusClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case "waiting for pick up":
+    switch (status) {
+      case "waiting_for_pickup":
         return "status-waiting";
-      case "picked up":
+      case "picked_up":
         return "status-active";
       case "returned":
         return "status-returned";
@@ -83,13 +96,14 @@ function UserDash() {
         </div>
       </header>
 
-      {loading && <p className="loading-message">Loading rentals...</p>}
-      {error && <p className="error-message">{error}</p>}
-
       {/* Current Rentals */}
       <section className="current-rentals">
         <h2>Current Rentals</h2>
-        {currentRentals.length === 0 ? (
+        {loadingCurrent ? (
+          <p className="loading-message">Loading current rentals...</p>
+        ) : errorCurrent ? (
+          <p className="error-message">{errorCurrent}</p>
+        ) : currentRentals.length === 0 ? (
           <p>No current rentals.</p>
         ) : (
           <table>
@@ -97,6 +111,7 @@ function UserDash() {
               <tr>
                 <th>Game Title</th>
                 <th>Price/Week</th>
+                <th>Rental Date</th>
                 <th>Due Date</th>
                 <th>Status</th>
               </tr>
@@ -106,8 +121,11 @@ function UserDash() {
                 <tr key={index}>
                   <td>{rental.title}</td>
                   <td>{formatPrice(rental.rentalPrice)}</td>
-                  <td>{rental.dueDate}</td>
-                  <td className={getStatusClass(rental.status)}>{rental.status}</td>
+                  <td>{formatDate(rental.rental_date)}</td>
+                  <td>{formatDate(rental.return_date)}</td>
+                  <td className={getStatusClass(rental.status)}>
+                    {rental.status.replace("_", " ")}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -118,7 +136,11 @@ function UserDash() {
       {/* Rental History */}
       <section className="rental-history">
         <h2>Rental History</h2>
-        {rentalHistory.length === 0 ? (
+        {loadingHistory ? (
+          <p className="loading-message">Loading rental history...</p>
+        ) : errorHistory ? (
+          <p className="error-message">{errorHistory}</p>
+        ) : rentalHistory.length === 0 ? (
           <p>No rental history.</p>
         ) : (
           <table>
@@ -126,6 +148,7 @@ function UserDash() {
               <tr>
                 <th>Game Title</th>
                 <th>Price/Week</th>
+                <th>Rental Date</th>
                 <th>Return Date</th>
               </tr>
             </thead>
@@ -134,7 +157,8 @@ function UserDash() {
                 <tr key={index}>
                   <td>{rental.title}</td>
                   <td>{formatPrice(rental.rentalPrice)}</td>
-                  <td>{rental.returnDate}</td>
+                  <td>{formatDate(rental.rental_date)}</td>
+                  <td>{formatDate(rental.return_date)}</td>
                 </tr>
               ))}
             </tbody>

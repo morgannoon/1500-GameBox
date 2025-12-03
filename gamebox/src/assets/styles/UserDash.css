@@ -1,123 +1,93 @@
-/* --- Base Page Styling (Matches .userdash-page) --- */
-.employee-dash {
+/* --- Base Page Styling --- */
+.userdash-page {
   min-height: 100vh;
-  /* Darker background for game aesthetic */
   background: linear-gradient(to bottom, #0a0a0a, #1b1b2f);
   padding: 20px;
-  /* Use a consistent, thematic font */
   font-family: 'Orbitron', sans-serif; 
 }
 
-/* --- Header Styling (Assuming the EmployeeDash also has a header/title area) --- */
-.employee-dash h1 {
+/* --- Header Styling --- */
+.userdash-header h1 {
   font-size: 1.8rem;
-  color: #a855f7; /* Purple accent color */
+  color: #a855f7;
   margin-bottom: 30px;
   text-align: center;
 }
 
-/* --- General Headings --- */
+/* --- Buttons --- */
+.userdash-buttons button {
+  background-color: #6562df;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: 0.2s;
+}
+
 h2 {
-  margin-top: 20px;
-  margin-bottom: 15px;
-  color: #a855f7;
-  border-bottom: 2px solid #a855f750; /* Light underline */
-  padding-bottom: 5px;
-}
-
-/* --- Table Styling (Inventory Table) --- */
-.games-table {
-  width: 100%;
-  border-collapse: collapse;
-  /* Glow effect */
-  box-shadow: 0 0 0.5rem rgba(168, 85, 247, 0.4); 
-  margin-bottom: 40px;
-}
-
-.games-table th,
-.games-table td {
-  text-align: left;
-  padding: 12px;
-  border: 1px solid #333;
+  display: block;
+  font-size: 1.5em;
+  margin-block-start: 0.83em;
+  margin-block-end: 0.83em;
+  margin-inline-start: 0px;
+  margin-inline-end: 0px;
+  font-weight: bold;
+  unicode-bidi: isolate;
   color: white;
 }
 
-.games-table th {
-  background-color: #1b1b2f; /* Dark header background */
+p {
+  display: block;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+  margin-inline-start: 0px;
+  margin-inline-end: 0px;
+  unicode-bidi: isolate;
+  color: white;
+
+}
+.userdash-buttons button:hover {
+  background-color: #4a48c7;
+}
+
+.userdash-buttons .logout {
+  background-color: #fa5000;
+}
+
+.userdash-buttons .logout:hover {
+  background-color: #e04a00;
+}
+
+/* --- Table Styling --- */
+.current-rentals table,
+.rental-history table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+  box-shadow: 0 0 0.5rem rgba(168, 85, 247, 0.4);
+}
+
+.current-rentals th,
+.current-rentals td,
+.rental-history th,
+.rental-history td {
+  padding: 12px;
+  border: 1px solid #333;
+  color: white;
+  text-align: left;
+}
+
+.current-rentals th,
+.rental-history th {
+  background-color: #1b1b2f;
   color: #a855f7;
 }
 
-/* --- Form Styling (Add New Game) --- */
-.add-game-form {
-    background-color: #1b1b2f;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 1rem rgba(168, 85, 247, 0.3);
-    margin-bottom: 30px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-.add-game-form h2 {
-    grid-column: 1 / -1;
-    color: #fff;
-    border-bottom: 1px solid #4a48c7;
-    margin-bottom: 10px;
-}
-
-.add-game-form input[type="text"],
-.add-game-form input[type="number"] {
-    padding: 10px;
-    border: 1px solid #4a48c7;
-    border-radius: 5px;
-    background-color: #0a0a0a;
-    color: white;
-}
-
-.add-game-form label {
-    display: flex;
-    align-items: center;
-    color: #ddd;
-    gap: 8px;
-}
-
-.add-game-form button[type="submit"] {
-    grid-column: 1 / -1;
-    background-color: #6562df;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 16px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: 0.2s;
-}
-
-.add-game-form button[type="submit"]:hover {
-    background-color: #4a48c7;
-}
-
-/* --- Table Actions --- */
-.games-table button {
-    background-color: #6562df;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-    margin-right: 5px;
-    transition: 0.2s;
-}
-
-.games-table button:hover {
-    background-color: #4a48c7;
-}
-
-.games-table button:last-child {
-    background-color: #fa5000;
-}
-
-.games-table button:last-child:hover {
-    background-color: #e04a00;
-}
+/* --- Status Colors --- */
+.status-waiting { color: #facc15; }   /* Yellow */
+.status-active { color: #22c55e; }    /* Green */
+.status-returned { color: #0ea5e9; }  /* Blue */
+.status-overdue { color: #f87171; }   /* Red */
+.status-unknown { color: #ffffff; }   /* White */
