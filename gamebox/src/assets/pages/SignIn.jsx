@@ -9,17 +9,21 @@ function SignIn() {
   const [isEmployee, setIsEmployee] = useState(false);
   const navigate = useNavigate();
 
+  // Check auth by verifying jwt exists AND is valid (ping server)
   useEffect(() => {
     const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) return; // User not logged in
+
       try {
-        // --- CORRECTED AUTH CHECK ENDPOINTS ---
         const endpoint = isEmployee
-          ? "http://localhost:5001/api/check-auth-employee" // Employee check
-          : "http://localhost:5001/api/check-auth"; // User check (corrected from /api/)
+          ? "http://localhost:5001/api/check-auth-employee"
+          : "http://localhost:5001/api/check-auth";
 
         const response = await fetch(endpoint, {
           method: "GET",
-          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.ok) {
@@ -29,6 +33,7 @@ function SignIn() {
         console.error("Error checking auth:", err);
       }
     };
+
     checkAuth();
   }, [navigate, isEmployee]);
 
@@ -37,14 +42,12 @@ function SignIn() {
     setError("");
 
     try {
-      // --- CORRECTED LOGIN ENDPOINTS ---
       const endpoint = isEmployee
-        ? "http://localhost:5001/api/login-employee" // Employee login
-        : "http://localhost:5001/api/sign-in"; // User login (changed from /api/login)
+        ? "http://localhost:5001/api/login-employee"
+        : "http://localhost:5001/api/sign-in";
 
       const response = await fetch(endpoint, {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
@@ -52,7 +55,11 @@ function SignIn() {
       const data = await response.json();
 
       if (response.ok) {
-        navigate(isEmployee ? "/employeeDash" : "/userDash");
+        // Save JWT
+        localStorage.setItem("token", data.token);
+
+        // Navigate user
+        navigate(isEmployee ? "/employeeDash" : "/Home");
       } else {
         setError(data.error || "Invalid email or password");
       }
@@ -70,13 +77,13 @@ function SignIn() {
         <h1 className="signin-title">
           {isEmployee ? "💼 Employee Login" : "🎮 User Login"}
         </h1>
+
         <p className="signin-subtitle">
           {isEmployee
             ? "Sign in to manage inventory and orders"
             : "Sign in to access your library and store deals"}
         </p>
 
-        {/* Toggle User/Employee */}
         <div className="toggle-login">
           <button
             type="button"
@@ -85,6 +92,7 @@ function SignIn() {
           >
             User
           </button>
+
           <button
             type="button"
             className={isEmployee ? "active-toggle" : ""}
@@ -124,10 +132,9 @@ function SignIn() {
           </button>
         </form>
 
-        {/* Only show account creation for Users */}
         {!isEmployee && (
           <p className="signup-link">
-            New here? <Link to="/CreateAcc">Create an account</Link>
+            New here? <Link to="/signup">Create an account</Link>
           </p>
         )}
       </div>

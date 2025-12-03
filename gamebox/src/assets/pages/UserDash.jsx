@@ -28,8 +28,8 @@ function UserDash() {
 
       try {
         const [currentRes, historyRes] = await Promise.all([
-          fetch("http://127.0.0.1:5001/api/current-rentals", { credentials: "include" }),
-          fetch("http://127.0.0.1:5001/api/rental-history", { credentials: "include" }),
+          fetch("http://localhost:5001/api/current-rentals", { credentials: "include" }),
+          fetch("http://localhost:5001/api/rental-history", { credentials: "include" }),
         ]);
 
         if (currentRes.ok && historyRes.ok) {

@@ -49,7 +49,7 @@ function Home() {
       }
     });
 
-    const url = `http://127.0.0.1:5001/api/games?${params.toString()}`;
+    const url = `http://localhost:5001/api/games?${params.toString()}`;
 
     try {
       const response = await fetch(url, {
@@ -85,7 +85,7 @@ function Home() {
   // Logout request
   const handleLogout = async () => {
     try {
-      await fetch("http://127.0.0.1:5001/api/logout", {
+      await fetch("http://localhost:5001/api/logout", {
         method: "POST",
         credentials: "include",
       });
