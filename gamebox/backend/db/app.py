@@ -223,26 +223,91 @@ def get_games():
     try:
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT g.game_id, g.title, g.description,
-                   g.price AS rentalPrice, g.maturity_rating AS maturity,
-                   g.platform_name, g.release_year AS releaseYear,
-                   IFNULL(SUM(i.available_copies),0) AS total_available,
-                   IFNULL(AVG(r.rating),0) AS rating
+
+        # ---- Read filter query params ----
+        store = request.args.get("store")
+        available = request.args.get("available")
+        minPrice = request.args.get("minPrice")
+        maxPrice = request.args.get("maxPrice")
+        releaseYear = request.args.get("releaseYear")
+        maturity = request.args.get("maturity")
+        minRating = request.args.get("minRating")
+
+        # ---- Build dynamic WHERE conditions ----
+        conditions = []
+        params = []
+
+        # Store filter -> requires joining inventory by store
+        if store:
+            conditions.append("i.store_id = %s")
+            params.append(store)
+
+        # Available only -> total_available > 0
+        if available == "true":
+            conditions.append("i.available_copies > 0")
+
+        # Price range
+        if minPrice:
+            conditions.append("g.price >= %s")
+            params.append(minPrice)
+
+        if maxPrice:
+            conditions.append("g.price <= %s")
+            params.append(maxPrice)
+
+        # Release year
+        if releaseYear:
+            conditions.append("g.release_year = %s")
+            params.append(releaseYear)
+
+        # Maturity rating
+        if maturity:
+            conditions.append("g.maturity_rating = %s")
+            params.append(maturity)
+
+        # Minimum rating
+        if minRating:
+            conditions.append("AVG(r.rating) >= %s")
+            params.append(minRating)
+
+        # ---- Build final SQL ----
+        sql = """
+            SELECT 
+                g.game_id, g.title, g.description,
+                g.price AS rentalPrice,
+                g.maturity_rating AS maturity,
+                g.platform_name,
+                g.release_year AS releaseYear,
+                IFNULL(SUM(i.available_copies), 0) AS total_available,
+                IFNULL(AVG(r.rating), 0) AS rating
             FROM Game g
             LEFT JOIN Inventory i ON g.game_id = i.game_id
             LEFT JOIN Reviews r ON g.game_id = r.game_id
-            GROUP BY g.game_id
-        """)
+        """
+
+        # Add WHERE if needed
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+
+        sql += " GROUP BY g.game_id"
+
+        cursor.execute(sql, params)
         games = cursor.fetchall()
+
+        # Add "available" boolean
         for game in games:
             game['available'] = game['total_available'] > 0
+
         cursor.close()
         con.close()
+
         return jsonify(games), 200
+
     except Exception as e:
         print(f"Game fetch error: {e}")
         return jsonify({"error": "Failed to fetch games"}), 500
+
+
 
 # --------------------------
 #   RESERVE GAME (FIXED: INVENTORY DECREMENT)

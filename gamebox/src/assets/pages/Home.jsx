@@ -38,14 +38,14 @@ function Home() {
 
     const params = new URLSearchParams();
 
-    Object.keys(filters).forEach((key) => {
-      const value = filters[key];
-      if (value !== "" && value !== false) {
-        if (key === "available" && value === true) {
-          params.append(key, "true");
-        } else if (key !== "available") {
-          params.append(key, value);
-        }
+    Object.entries(filters).forEach(([key, value]) => {
+      // Skip empty values
+      if (value === "" || value === null || value === undefined) return;
+
+      if (key === "available") {
+        if (value === true) params.append("available", "true");
+      } else {
+        params.append(key, value);
       }
     });
 
@@ -82,12 +82,11 @@ function Home() {
   const goToDashboard = () => navigate("/UserDash");
   const goToGameDetails = (gameId) => navigate(`/game/${gameId}`);
 
-  // Logout request
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/signin");
   };
-
 
   return (
     <div className="home-page">
@@ -116,14 +115,15 @@ function Home() {
             <option value="2">Uptown</option>
           </select>
 
-          <label className="checkbox-label">
+          {/* NEW checkbox */}
+          <label className="available-check">
             <input
               type="checkbox"
               name="available"
               checked={filters.available}
               onChange={handleFilterChange}
             />
-            <span>Available Only</span>
+            Available Only
           </label>
 
           <input
