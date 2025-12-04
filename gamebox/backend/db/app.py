@@ -101,6 +101,10 @@ def get_employee_from_token():
         print("Token decode error:", e)
         return None
 
+
+# --------------------------
+#       REGISTRATION
+# --------------------------
 # --------------------------
 #       REGISTRATION
 # --------------------------
@@ -108,50 +112,65 @@ def get_employee_from_token():
 def register():
     try:
         data = request.get_json()
+
         username = data.get('username', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '').strip()
- 
+
+        # Validate required fields
         if not username or not email or not password:
             return jsonify({"error": "All fields are required"}), 400
- 
+
+        # Split into first + last name
         first_name, last_name = username.split('_') if '_' in username else (username, '')
- 
+
         hashed_password = generate_password_hash(password)
- 
+
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
- 
+
+        # Check if email already exists
         cursor.execute("SELECT * FROM Customer WHERE email = %s", (email,))
         if cursor.fetchone():
             cursor.close()
             con.close()
             return jsonify({"error": "Email already exists"}), 409
- 
+
+        # Insert customer
         cursor.execute(
-            "INSERT INTO Customer (password, first_name, last_name, email) VALUES (%s, %s, %s, %s)",
+            """
+            INSERT INTO Customer (password, first_name, last_name, email)
+            VALUES (%s, %s, %s, %s)
+            """,
             (hashed_password, first_name, last_name, email)
         )
         con.commit()
         customer_id = cursor.lastrowid
- 
+
         cursor.close()
         con.close()
- 
-        session.permanent = True
-        session['customer_id'] = customer_id
-        session['email'] = email
-        session['username'] = username
- 
+
+        # ---- CREATE JWT TOKEN ----
+        token_payload = {
+            "customer_id": customer_id,
+            "email": email,
+            "exp": datetime.utcnow() + timedelta(hours=12)
+        }
+        token = jwt.encode(token_payload, SECRET, algorithm="HS256")
+
         return jsonify({
             "message": "Registration successful",
-            "customer_id": customer_id,
-            "username": username,
-            "email": email
+            "token": token,
+            "customer": {
+                "customer_id": customer_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email
+            }
         }), 201
- 
+
     except Exception as e:
-        print(f"Registration error: {str(e)}")
+        print("Registration error:", traceback.format_exc())
         return jsonify({"error": "Registration failed"}), 500
 
 # --------------------------

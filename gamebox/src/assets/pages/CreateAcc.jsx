@@ -14,35 +14,33 @@ function CreateAcc() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+  
     // Check if passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
       return;
     }
-
+  
     try {
       const response = await fetch("http://localhost:5001/api/register", {
         method: "POST",
-        credentials: "include", 
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ username, email, password }),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
-        // Status 201: Registration successful
         console.log("Registration successful:", data);
-        alert(`Account created for ${data.username}! Please sign in.`);
-        // Redirect to sign-in page after successful registration
+        alert(
+          `Account created for ${data.customer.first_name} ${data.customer.last_name}! Please sign in.`
+        );
         navigate("/signin");
       } else {
-        // Handle server errors (400, 409, 500)
         console.log("Registration failed:", data);
-        // Display the specific error message from the server
         setError(data.error || "Registration failed. Please try again.");
       }
     } catch (err) {
@@ -50,6 +48,7 @@ function CreateAcc() {
       setError("Could not connect to the API server.");
     }
   };
+  
 
   return (
     <div className="create-page">
