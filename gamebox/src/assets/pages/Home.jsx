@@ -83,16 +83,9 @@ function Home() {
   const goToGameDetails = (gameId) => navigate(`/game/${gameId}`);
 
   // Logout request
-  const handleLogout = async () => {
-    try {
-      await fetch("http://localhost:5001/api/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error(err);
-    }
-    navigate("/SignIn");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/signin");
   };
 
 
