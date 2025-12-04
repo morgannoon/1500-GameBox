@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Assuming you need this for handleLogout
+import { useNavigate } from "react-router-dom";
 import "../styles/EmployeeDash.css";
 
 function EmployeeDash() {
-  const navigate = useNavigate(); // Hook to navigate
-  const token = localStorage.getItem("token"); // use a single JWT for all employee calls
+  const navigate = useNavigate(); 
+  const token = localStorage.getItem("token");
   const [games, setGames] = useState([]);
   const [newGame, setNewGame] = useState({
     title: "",
@@ -15,7 +15,6 @@ function EmployeeDash() {
     genre: "",
     description: "",
     availability: true,
-    // NEW FIELD ADDED for inventory count
     total_available: 1, 
   });
 
@@ -34,8 +33,6 @@ function EmployeeDash() {
     try {
       if (!token) throw new Error("Not logged in as employee");
 
-      // The API endpoint relies on the JWT to determine the employee's store_id 
-      // and returns only the inventory relevant to that store.
       const response = await fetch("http://localhost:5001/api/employee/games", {
         method: "GET",
         headers: {
@@ -54,7 +51,7 @@ function EmployeeDash() {
 
   useEffect(() => {
     fetchGames();
-  }, [token]); // Added token as dependency
+  }, [token]); 
 
   // Add new game
   const addGame = async (e) => {
@@ -99,7 +96,6 @@ function EmployeeDash() {
 
   // Fetch rentals by customer email
   const fetchCurrentRentals = async (e) => {
-    // Prevent default form submission if called from the form
     if (e && e.preventDefault) {
       e.preventDefault();
     }
@@ -147,7 +143,6 @@ function EmployeeDash() {
     try {
       if (!token) throw new Error("Not logged in as employee");
       
-      // Use reserveId as confirmed by backend structure
       const res = await fetch(`http://localhost:5001/api/rentals/${reserveId}`, {
         method: "PUT",
         headers: {
@@ -226,7 +221,7 @@ function EmployeeDash() {
             required
           />
 
-          {/* NEW INPUT FIELD FOR COPIES */}
+          {/* INPUT FIELD FOR COPIES */}
           <label htmlFor="copies">Available Copies:</label>
           <input
             id="copies"
