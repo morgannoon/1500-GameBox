@@ -44,7 +44,6 @@ def require_auth(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if request.method == "OPTIONS":
-            # Allow preflight requests to pass
             return "", 200
 
         auth_header = request.headers.get("Authorization")
@@ -198,9 +197,9 @@ def sign_in():
 def check_auth():
     user = request.user
     
-    # FIX: Safely check for 'customer_id' to prevent KeyError crash 
+    
     if 'customer_id' not in user:
-        # Return 403 because a valid token was presented, but for the wrong role (employee)
+        
         return jsonify({"authenticated": False, "error": "Token is not for a customer"}), 403
         
     try:
@@ -224,7 +223,7 @@ def get_games():
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
 
-        # ---- Read filter query params ----
+        
         store = request.args.get("store")
         available = request.args.get("available")
         minPrice = request.args.get("minPrice")
@@ -233,7 +232,7 @@ def get_games():
         maturity = request.args.get("maturity")
         minRating = request.args.get("minRating")
 
-        # ---- Build dynamic WHERE conditions ----
+        
         conditions = []
         params = []
 
@@ -285,7 +284,7 @@ def get_games():
             LEFT JOIN Reviews r ON g.game_id = r.game_id
         """
 
-        # Add WHERE if needed
+        
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
 
@@ -327,7 +326,7 @@ def reserve_game(game_id):
         if not store_id or not inventory_id:
             return jsonify({"error": "Missing reservation data"}), 400
 
-        # --- CRITICAL UPDATE: DECREASE INVENTORY COUNT ---
+        
         
         # 1. Decrease the available copies (atomically check if > 0)
         cursor.execute(
@@ -392,7 +391,7 @@ def get_inventory_by_store(store_id, game_id):
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
         
-        # FIX: Query searches by store_id AND game_id to find the inventory_id
+        
         cursor.execute("""
             SELECT inventory_id, available_copies
             FROM Inventory
@@ -495,7 +494,7 @@ def rental_history():
 #       REVIEWS
 # --------------------------
 @app.route('/api/games/<int:game_id>/reviews', methods=['GET', 'POST', 'OPTIONS'])
-@require_auth  # ensures we have request.user with customer_id
+@require_auth  
 def game_reviews(game_id):
     if request.method == "OPTIONS":
         return "", 200
@@ -505,7 +504,7 @@ def game_reviews(game_id):
 
     try:
         if request.method == 'GET':
-            # Fix: Concatenate first_name and last_name since 'c.name' doesn't exist
+            
             cursor.execute("""
                 SELECT r.review_id, r.rating, r.review, r.creation_date, r.customer_id, 
                        CONCAT(c.first_name, ' ', c.last_name) AS customer_name
@@ -533,7 +532,7 @@ def game_reviews(game_id):
             con.commit()
             review_id = cursor.lastrowid
 
-            # Return the newly created review
+            
             cursor.execute("SELECT * FROM Reviews WHERE review_id = %s", (review_id,))
             new_review = cursor.fetchone()
 
@@ -564,7 +563,7 @@ def get_employee_games():
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
         
-        # MODIFIED QUERY: Joins Inventory and filters by the employee's store_id
+        
         cursor.execute("""
             SELECT g.game_id, g.title, g.platform_name, g.price, g.availability,
                    IFNULL(i.available_copies, 0) AS total_available,
@@ -650,19 +649,19 @@ def add_game():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["PUT"])
-@require_employee # Fix: Added employee authentication
+@require_employee 
 def update_game(game_id):
     try:
         data = request.get_json()
         title = data.get("title")
         platform_name = data.get("platform_name")
-        price = data.get("price")  # renamed from rentalPrice
-        availability = data.get("availability")  # renamed from available
+        price = data.get("price")  
+        availability = data.get("availability")  
 
         con = get_db_connection()
         cursor = con.cursor()
 
-        # Convert availability to 1/0 for MySQL
+        
         availability_int = 1 if availability else 0
 
         cursor.execute("""
@@ -687,7 +686,7 @@ def update_game(game_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["DELETE"])
-@require_employee # Fix: Added employee authentication
+@require_employee 
 def delete_game(game_id):
     try:
         con = get_db_connection()
@@ -850,7 +849,7 @@ def login_employee():
         if not employee or not check_password_hash(employee["password"], password):
             return jsonify({"error": "Invalid email or password"}), 401
 
-        # Fix: Safely get store_id and role for payload creation
+        
         payload = {
             "employee_id": employee["employee_id"],
             "email": employee["business_email"],
