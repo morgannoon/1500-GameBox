@@ -7,7 +7,7 @@ function CreateAcc() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState(""); // For server or validation errors
+  const [error, setError] = useState(""); //For server / validation errors
 
   const navigate = useNavigate();
 
@@ -24,7 +24,7 @@ function CreateAcc() {
     try {
       const response = await fetch("http://localhost:5001/api/register", {
         method: "POST",
-        credentials: "include", // CRITICAL: This sends the session cookie after registration
+        credentials: "include", 
         headers: {
           "Content-Type": "application/json",
         },
@@ -42,7 +42,7 @@ function CreateAcc() {
       } else {
         // Handle server errors (400, 409, 500)
         console.log("Registration failed:", data);
-        // Display the specific error message from the server (e.g., "Email already exists")
+        // Display the specific error message from the server
         setError(data.error || "Registration failed. Please try again.");
       }
     } catch (err) {
