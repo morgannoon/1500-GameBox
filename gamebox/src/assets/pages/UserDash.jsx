@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 function UserDash() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token"); // JWT stored on login
+  const token = localStorage.getItem("token"); 
 
   const [currentRentals, setCurrentRentals] = useState([]);
   const [rentalHistory, setRentalHistory] = useState([]);
@@ -27,7 +27,7 @@ function UserDash() {
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
     const date = new Date(dateStr);
-    return date.toLocaleDateString(); // e.g., 12/3/2025
+    return date.toLocaleDateString(); 
   };
 
   const fetchData = async (url, setData, setError, setLoading) => {
