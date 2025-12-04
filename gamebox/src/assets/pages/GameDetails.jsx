@@ -76,7 +76,6 @@ function GameDetails() {
   const fetchInventoryId = async (storeId, gameId) => {
     try {
       const res = await fetch(
-        // Route is designed to search by store ID and GAME ID
         `http://localhost:5001/api/stores/${storeId}/inventory/${gameId}`,
         { headers: { "Authorization": `Bearer ${token}` } }
       );
@@ -93,12 +92,12 @@ function GameDetails() {
     if (!token) return alert("You must be logged in to reserve a game.");
     if (!selectedStore) return alert("Please select a store for pickup.");
 
-    // Step 1: Get the specific inventory ID
+    // Get the specific inventory ID
     const inventoryId = await fetchInventoryId(selectedStore, gameId); 
     if (!inventoryId) return alert("No available inventory at this store.");
 
     try {
-      // Step 2: Send reservation request
+      // Send reservation request
       const res = await fetch(`http://localhost:5001/api/games/${gameId}/reserve`, {
         method: "POST",
         headers: {
@@ -116,7 +115,7 @@ function GameDetails() {
       if (res.ok) {
         alert("Game reserved successfully!");
         
-        // --- FIX: Reload the page to display the updated available copies count ---
+        // Reload the page to display the updated available copies count
         window.location.reload(); 
         
       } else {
@@ -128,7 +127,7 @@ function GameDetails() {
     }
   };
 
-  // --- Submit a new review ---
+  // Submit a new review
   const submitReview = async () => {
     if (!newReviewText.trim()) return alert("Please enter a review.");
     try {
