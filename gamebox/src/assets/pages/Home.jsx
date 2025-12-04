@@ -115,7 +115,7 @@ function Home() {
             <option value="1">Uptown</option>
           </select>
 
-          {/* NEW checkbox */}
+          {/* checkbox */}
           <label className="available-check">
             <input
               type="checkbox"
