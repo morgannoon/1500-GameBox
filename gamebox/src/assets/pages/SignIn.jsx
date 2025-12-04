@@ -16,10 +16,8 @@ function SignIn() {
 
       if (!token) return;
 
-      // NOTE: We run checks here to clear invalid tokens, but DO NOT redirect.
       // The user must click "Sign In" to use the valid token.
-
-      // 1. Try Employee Check first
+      // Try Employee Check first
       try {
         const employeeResponse = await fetch(
           "http://localhost:5001/api/check-auth-employee",
@@ -30,15 +28,13 @@ function SignIn() {
         );
 
         if (employeeResponse.ok) {
-          // DO NOT REDIRECT HERE. Allow user to see the form.
           // navigate("/employeeDash"); 
           return;
         }
       } catch (err) {
-        // Non-critical error. Continue to customer check.
       }
 
-      // 2. Try Customer Check
+      // Try Customer Check
       try {
         const customerResponse = await fetch(
           "http://localhost:5001/api/check-auth",
@@ -49,7 +45,6 @@ function SignIn() {
         );
 
         if (customerResponse.ok) {
-          // DO NOT REDIRECT HERE. Allow user to see the form.
           // navigate("/Home"); 
           return;
         } 
@@ -63,7 +58,6 @@ function SignIn() {
       }
     };
 
-    // FIX: The checkAuth logic is now run to cleanup bad tokens, but won't force navigation.
     checkAuth();
   }, [isEmployee, navigate]); 
 
@@ -88,8 +82,6 @@ function SignIn() {
         // Clear any old token and save the new JWT
         localStorage.removeItem("token");
         localStorage.setItem("token", data.token);
-
-        // This is the ONLY place where redirection occurs: after a successful form submission.
         navigate(isEmployee ? "/employeeDash" : "/Home");
       } else {
         setError(data.error || "Invalid email or password");
