@@ -587,43 +587,46 @@ def get_employee_games():
 
 
 @app.route("/api/games", methods=["POST"])
-@require_employee # Fix: Added employee authentication
+@require_employee
 def add_game():
     try:
         data = request.get_json()
+
+        # --- Read all game fields ---
         title = data.get("title")
         platform_name = data.get("platform_name")
         price = data.get("price", 0.0)
         availability = data.get("availability", True)
-        
-        # New Field: Get total_available copies from the request body
-        total_available = data.get("total_available", 0) 
-        
-        # Get employee's store_id from the token payload (set by @require_employee)
+        maturity_rating = data.get("maturity_rating")
+        release_year = data.get("release_year")
+        description = data.get("description")
+        genre = data.get("genre")  # <-- added
+        total_available = data.get("total_available", 0)
+
+        # Employee's store_id from token
         store_id = request.employee.get("store_id")
 
+        # --- Validation ---
         if not title or not platform_name:
             return jsonify({"error": "Title and Platform Name are required"}), 400
-        
-        # CRITICAL CHECK: Ensure the employee is associated with a store
         if not store_id:
-             return jsonify({"error": "Employee token does not contain a store ID."}), 403
+            return jsonify({"error": "Employee token does not contain a store ID."}), 403
 
         con = get_db_connection()
         cursor = con.cursor()
 
-        # Convert availability to 1/0 for MySQL
+        # Convert availability to 1/0
         availability_int = 1 if availability else 0
 
-        # 1. Insert into the Game table
+        # --- Insert into Game table ---
         cursor.execute("""
-            INSERT INTO Game (title, platform_name, price, availability)
-            VALUES (%s, %s, %s, %s)
-        """, (title, platform_name, price, availability_int))
+            INSERT INTO Game (title, platform_name, price, availability, maturity_rating, release_year, description, genre)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (title, platform_name, price, availability_int, maturity_rating, release_year, description, genre))
 
         game_id = cursor.lastrowid
-        
-        # 2. Insert into the Inventory table (linked to the employee's store)
+
+        # --- Insert into Inventory table ---
         if game_id and total_available > 0:
             cursor.execute("""
                 INSERT INTO Inventory (store_id, game_id, available_copies)
@@ -634,7 +637,11 @@ def add_game():
         cursor.close()
         con.close()
 
-        return jsonify({"message": "Game added and inventory updated", "game_id": game_id, "store_id": store_id}), 201
+        return jsonify({
+            "message": "Game added and inventory updated",
+            "game_id": game_id,
+            "store_id": store_id
+        }), 201
 
     except Exception as e:
         import traceback
