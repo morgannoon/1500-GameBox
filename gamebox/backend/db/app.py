@@ -8,7 +8,6 @@ from functools import wraps
 import traceback
 
 
-
 app = Flask(__name__)
 
 # --- Secret for JWT ---
@@ -105,7 +104,7 @@ def get_employee_from_token():
         return None
 
 # --------------------------
-#         SIGN IN (User)
+#       SIGN IN (User)
 # --------------------------
 @app.route('/api/sign-in', methods=['POST'])
 def sign_in():
@@ -135,6 +134,7 @@ def sign_in():
         }), 200
     except Exception as e:
         print("Login error:", e)
+        traceback.print_exc()
         return jsonify({"error": "Internal error"}), 500
 
 
@@ -145,11 +145,22 @@ def sign_in():
 @require_auth
 def check_auth():
     user = request.user
-    return jsonify({
-        "authenticated": True,
-        "customer_id": user["customer_id"],
-        "email": user["email"]
-    }), 200
+    
+    # FIX: Safely check for 'customer_id' to prevent KeyError crash 
+    if 'customer_id' not in user:
+        # Return 403 because a valid token was presented, but for the wrong role (employee)
+        return jsonify({"authenticated": False, "error": "Token is not for a customer"}), 403
+        
+    try:
+        return jsonify({
+            "authenticated": True,
+            "customer_id": user["customer_id"],
+            "email": user["email"]
+        }), 200
+    except Exception as e:
+        print("Check auth error:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error during auth check"}), 500
 
 
 # --------------------------
@@ -182,11 +193,14 @@ def get_games():
         return jsonify({"error": "Failed to fetch games"}), 500
 
 # --------------------------
-#   RESERVE GAME
+#   RESERVE GAME (FIXED: INVENTORY DECREMENT)
 # --------------------------
 @app.route('/api/games/<int:game_id>/reserve', methods=['POST'])
 @require_auth
 def reserve_game(game_id):
+    con = get_db_connection()
+    cursor = con.cursor(dictionary=True)
+    
     try:
         user_id = request.user["customer_id"]
         data = request.get_json()
@@ -196,21 +210,43 @@ def reserve_game(game_id):
         if not store_id or not inventory_id:
             return jsonify({"error": "Missing reservation data"}), 400
 
-        con = get_db_connection()
-        cursor = con.cursor(dictionary=True)
+        # --- CRITICAL UPDATE: DECREASE INVENTORY COUNT ---
+        
+        # 1. Decrease the available copies (atomically check if > 0)
+        cursor.execute(
+            """
+            UPDATE Inventory 
+            SET available_copies = available_copies - 1 
+            WHERE inventory_id = %s AND available_copies > 0
+            """,
+            (inventory_id,)
+        )
+        
+        # If the update failed (because available_copies was 0 or less), abort reservation
+        if cursor.rowcount == 0:
+            return jsonify({"error": "No copies available for reservation. Try again."}), 409 # Conflict
+
+        # 2. Insert the new reservation record
         cursor.execute("""
             INSERT INTO Reserve (customer_id, store_id, game_id, inventory_id)
             VALUES (%s, %s, %s, %s)
         """, (user_id, store_id, game_id, inventory_id))
+        
+        # Commit both the inventory update and the reservation insertion as a single transaction
         con.commit()
-        cursor.close()
-        con.close()
-
-        return jsonify({"message": "Game reserved successfully"}), 200
+        
+        return jsonify({"message": "Game reserved successfully", "inventory_updated": True}), 200
 
     except Exception as e:
+        # Rollback if any error occurs (e.g., database failure)
+        con.rollback()
         print("Reserve game error:", e)
-        return jsonify({"error": "Internal server error"}), 500
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error during reservation."}), 500
+        
+    finally:
+        cursor.close()
+        con.close()
 
 # --------------------------
 #       STORES
@@ -230,35 +266,39 @@ def get_stores():
         return jsonify({"error": "Failed to fetch stores"}), 500
 
 # --------------------------
-#       INVETNROY
+#       INVENTORY (FIXED ROUTE TO LOOK UP BY GAME ID)
 # --------------------------
-
-@app.route('/api/stores/<int:store_id>/inventory/<int:inventory_id>', methods=['GET'])
-def get_inventory_by_store(store_id, inventory_id):
+# FIX: Route changed to accept game_id
+@app.route('/api/stores/<int:store_id>/inventory/<int:game_id>', methods=['GET'])
+def get_inventory_by_store(store_id, game_id):
     try:
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
+        
+        # FIX: Query searches by store_id AND game_id to find the inventory_id
         cursor.execute("""
-            SELECT *
+            SELECT inventory_id, available_copies
             FROM Inventory
-            WHERE store_id = %s AND inventory_id = %s
-        """, (store_id, inventory_id))
+            WHERE store_id = %s AND game_id = %s
+        """, (store_id, game_id)) 
+        
         inventory = cursor.fetchone()
         cursor.close()
         con.close()
 
-        if not inventory:
-            return jsonify({"error": "Inventory not found"}), 404
+        if not inventory or inventory.get('available_copies', 0) < 1:
+            return jsonify({"error": "Inventory not found or copies unavailable"}), 404
 
-        return jsonify(inventory), 200
+        # Return the actual inventory_id needed for the reservation POST
+        return jsonify({"inventory_id": inventory['inventory_id']}), 200 
     except Exception as e:
         print("Error fetching inventory:", e)
+        traceback.print_exc()
         return jsonify({"error": "Could not fetch inventory"}), 500
 
 
 # --------------------------
 #   CURRENT RENTALS
-# --------------------------
 # --------------------------
 @app.route("/api/current-rentals", methods=["GET", "OPTIONS"])
 @require_auth
@@ -273,7 +313,8 @@ def current_rentals():
         cursor = con.cursor(dictionary=True)
         cursor.execute("""
             SELECT 
-                g.game_id, 
+                r.reserve_id, 
+                r.status, 
                 g.title, 
                 g.price AS rentalPrice,  -- rename for frontend
                 r.rental_date, 
@@ -334,7 +375,7 @@ def rental_history():
         return jsonify({"error": "Failed to fetch rental history"}), 500
 
 # --------------------------
-#         REVIEWS
+#       REVIEWS
 # --------------------------
 @app.route('/api/games/<int:game_id>/reviews', methods=['GET', 'POST', 'OPTIONS'])
 @require_auth  # ensures we have request.user with customer_id
@@ -347,9 +388,10 @@ def game_reviews(game_id):
 
     try:
         if request.method == 'GET':
-            # Fetch reviews for the game
+            # Fix: Concatenate first_name and last_name since 'c.name' doesn't exist
             cursor.execute("""
-                SELECT r.review_id, r.rating, r.review, r.creation_date, r.customer_id, c.name AS customer_name
+                SELECT r.review_id, r.rating, r.review, r.creation_date, r.customer_id, 
+                       CONCAT(c.first_name, ' ', c.last_name) AS customer_name
                 FROM Reviews r
                 JOIN Customer c ON r.customer_id = c.customer_id
                 WHERE r.game_id = %s
@@ -393,17 +435,28 @@ def game_reviews(game_id):
 #       GET/ADD/UPDATE/DELETE GAME EMPLOYEE
 # --------------------------
 @app.route("/api/employee/games", methods=["GET"])
+@require_employee
 def get_employee_games():
-    employee = get_employee_from_token()
+    employee = request.employee 
+    store_id = employee.get("store_id")
 
-    # if no token → return empty list (so React doesn't crash)
-    if not employee:
-        return jsonify([]), 200    
+    if not store_id:
+        return jsonify({"error": "Employee store ID not found"}), 400
 
     try:
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Games")  # your table name
+        
+        # MODIFIED QUERY: Joins Inventory and filters by the employee's store_id
+        cursor.execute("""
+            SELECT g.game_id, g.title, g.platform_name, g.price, g.availability,
+                   IFNULL(i.available_copies, 0) AS total_available,
+                   i.inventory_id
+            FROM Game g
+            LEFT JOIN Inventory i ON g.game_id = i.game_id AND i.store_id = %s
+            ORDER BY g.game_id
+        """, (store_id,)) 
+        
         games = cursor.fetchall()
         cursor.close()
         con.close()
@@ -412,20 +465,32 @@ def get_employee_games():
 
     except Exception as e:
         print("Games fetch error:", e)
-        return jsonify([]), 200
+        traceback.print_exc()
+        return jsonify([]), 500
 
 
 @app.route("/api/games", methods=["POST"])
+@require_employee # Fix: Added employee authentication
 def add_game():
     try:
         data = request.get_json()
         title = data.get("title")
         platform_name = data.get("platform_name")
-        price = data.get("price", 0.0)  # renamed from rentalPrice
-        availability = data.get("availability", True)  # matches table
+        price = data.get("price", 0.0)
+        availability = data.get("availability", True)
+        
+        # New Field: Get total_available copies from the request body
+        total_available = data.get("total_available", 0) 
+        
+        # Get employee's store_id from the token payload (set by @require_employee)
+        store_id = request.employee.get("store_id")
 
         if not title or not platform_name:
             return jsonify({"error": "Title and Platform Name are required"}), 400
+        
+        # CRITICAL CHECK: Ensure the employee is associated with a store
+        if not store_id:
+             return jsonify({"error": "Employee token does not contain a store ID."}), 403
 
         con = get_db_connection()
         cursor = con.cursor()
@@ -433,17 +498,26 @@ def add_game():
         # Convert availability to 1/0 for MySQL
         availability_int = 1 if availability else 0
 
+        # 1. Insert into the Game table
         cursor.execute("""
             INSERT INTO Game (title, platform_name, price, availability)
             VALUES (%s, %s, %s, %s)
         """, (title, platform_name, price, availability_int))
 
-        con.commit()
         game_id = cursor.lastrowid
+        
+        # 2. Insert into the Inventory table (linked to the employee's store)
+        if game_id and total_available > 0:
+            cursor.execute("""
+                INSERT INTO Inventory (store_id, game_id, available_copies)
+                VALUES (%s, %s, %s)
+            """, (store_id, game_id, total_available))
+
+        con.commit()
         cursor.close()
         con.close()
 
-        return jsonify({"message": "Game added", "game_id": game_id}), 201
+        return jsonify({"message": "Game added and inventory updated", "game_id": game_id, "store_id": store_id}), 201
 
     except Exception as e:
         import traceback
@@ -452,6 +526,7 @@ def add_game():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["PUT"])
+@require_employee # Fix: Added employee authentication
 def update_game(game_id):
     try:
         data = request.get_json()
@@ -488,6 +563,7 @@ def update_game(game_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/games/<int:game_id>", methods=["DELETE"])
+@require_employee # Fix: Added employee authentication
 def delete_game(game_id):
     try:
         con = get_db_connection()
@@ -565,8 +641,9 @@ def update_rental_status(rental_id):
         cursor = con.cursor()
 
         # Update the rental status
+        # Note: rental_id in frontend maps to reserve_id in DB
         cursor.execute(
-            "UPDATE Reserve SET status = %s WHERE rental_id = %s",
+            "UPDATE Reserve SET status = %s WHERE reserve_id = %s", 
             (new_status, rental_id)
         )
         con.commit()
@@ -609,7 +686,7 @@ def check_auth_employee():
     })
 
 # --------------------------
-#         SIGN IN (Employee)
+#       SIGN IN (Employee)
 # --------------------------
 @app.route("/api/login-employee", methods=["POST"])
 def login_employee():
@@ -631,10 +708,12 @@ def login_employee():
         if not employee or not check_password_hash(employee["password"], password):
             return jsonify({"error": "Invalid email or password"}), 401
 
-        # Generate JWT for employee
+        # Fix: Safely get store_id and role for payload creation
         payload = {
             "employee_id": employee["employee_id"],
             "email": employee["business_email"],
+            "store_id": employee.get("store_id"), 
+            "role": employee.get("role"),         
             "exp": datetime.utcnow() + timedelta(hours=12)
         }
         token = jwt.encode(payload, SECRET, algorithm="HS256")
@@ -643,6 +722,7 @@ def login_employee():
 
     except Exception as e:
         print("Employee login error:", e)
+        traceback.print_exc()
         return jsonify({"error": "Server error during login"}), 500
 
 

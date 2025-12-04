@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-"scripts": {
+  "scripts": {
     "start": "concurrently \"vite\" \"cd backend/db && python app.py\"",
     "dev": "vite",
     "backend": "cd backend/db && python app.py",
@@ -14,6 +14,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "concurrently": "^9.2.1",
+    "cors": "^2.8.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",

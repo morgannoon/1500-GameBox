@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Assuming you need this for handleLogout
 import "../styles/EmployeeDash.css";
 
 function EmployeeDash() {
+  const navigate = useNavigate(); // Hook to navigate
   const token = localStorage.getItem("token"); // use a single JWT for all employee calls
   const [games, setGames] = useState([]);
   const [newGame, setNewGame] = useState({
@@ -13,7 +15,8 @@ function EmployeeDash() {
     genre: "",
     description: "",
     availability: true,
-    total_available: 1,
+    // NEW FIELD ADDED for inventory count
+    total_available: 1, 
   });
 
   const [customerEmail, setCustomerEmail] = useState("");
@@ -31,6 +34,8 @@ function EmployeeDash() {
     try {
       if (!token) throw new Error("Not logged in as employee");
 
+      // The API endpoint relies on the JWT to determine the employee's store_id 
+      // and returns only the inventory relevant to that store.
       const response = await fetch("http://localhost:5001/api/employee/games", {
         method: "GET",
         headers: {
@@ -49,7 +54,7 @@ function EmployeeDash() {
 
   useEffect(() => {
     fetchGames();
-  }, []);
+  }, [token]); // Added token as dependency
 
   // Add new game
   const addGame = async (e) => {
@@ -63,10 +68,12 @@ function EmployeeDash() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newGame),
+        // The entire newGame object, including total_available, is sent to the backend.
+        body: JSON.stringify(newGame), 
       });
 
       if (res.ok) {
+        // Reset form state, including total_available
         setNewGame({
           title: "",
           platform_name: "",
@@ -78,9 +85,12 @@ function EmployeeDash() {
           availability: true,
           total_available: 1,
         });
-        fetchGames();
+        fetchGames(); // Refresh the list of games
+        alert("Game and Inventory added successfully!");
       } else {
-        console.error("Failed to add game");
+        const errorData = await res.json();
+        console.error("Failed to add game:", errorData.error);
+        alert(`Failed to add game: ${errorData.error}`);
       }
     } catch (err) {
       console.error(err);
@@ -89,7 +99,11 @@ function EmployeeDash() {
 
   // Fetch rentals by customer email
   const fetchCurrentRentals = async (e) => {
-    e.preventDefault();
+    // Prevent default form submission if called from the form
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
     if (!customerEmail) {
       setErrorRentals("Please enter a customer email");
       return;
@@ -129,11 +143,12 @@ function EmployeeDash() {
   };
 
   // Update rental status
-  const updateRentalStatus = async (rentalId, newStatus) => {
+  const updateRentalStatus = async (reserveId, newStatus) => {
     try {
       if (!token) throw new Error("Not logged in as employee");
-
-      const res = await fetch(`http://localhost:5001/api/rentals/${rentalId}`, {
+      
+      // Use reserveId as confirmed by backend structure
+      const res = await fetch(`http://localhost:5001/api/rentals/${reserveId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -143,7 +158,8 @@ function EmployeeDash() {
       });
 
       if (res.ok) {
-        fetchCurrentRentals({ preventDefault: () => {} });
+        // Refresh the list of rentals after a successful update
+        fetchCurrentRentals({}); 
       } else {
         console.error("Failed to update rental status");
       }
@@ -157,6 +173,8 @@ function EmployeeDash() {
       <h1>Employee Dashboard</h1>
       <button className="logout" onClick={handleLogout}>Logout</button>
 
+      ---
+      
       {/* Add New Game */}
       <form onSubmit={addGame} className="add-game-form">
         <h2>Add New Game to Inventory</h2>
@@ -208,6 +226,21 @@ function EmployeeDash() {
             required
           />
 
+          {/* NEW INPUT FIELD FOR COPIES */}
+          <label htmlFor="copies">Available Copies:</label>
+          <input
+            id="copies"
+            type="number"
+            placeholder="Number of copies"
+            value={newGame.total_available}
+            onChange={(e) =>
+              setNewGame({ ...newGame, total_available: parseInt(e.target.value) || 0 })
+            }
+            required
+            min="1"
+          />
+          {/* END NEW INPUT FIELD */}
+
           <label htmlFor="maturity_rating">Maturity Rating:</label>
           <input
             id="maturity_rating"
@@ -258,6 +291,8 @@ function EmployeeDash() {
 
         <button type="submit">Add Game</button>
       </form>
+      
+      ---
 
       {/* Inventory Table */}
       <h2>Store Inventory</h2>
@@ -273,11 +308,14 @@ function EmployeeDash() {
         </thead>
         <tbody>
           {games.map((game) => (
-            <tr key={game.game_id}>
-              <td>{game.title}</td>
+            // Hydration fix (tight <tr> and <td>)
+            <tr key={game.game_id}><td>{game.title}</td>
               <td>{game.platform_name}</td>
               <td>{game.total_available}</td>
-              <td>${game.price?.toFixed(2)}</td>
+              <td>
+                {/* TypeError fix: Ensure price is a number */}
+                ${game.price != null ? Number(game.price).toFixed(2) : 'N/A'}
+              </td>
               <td>{game.availability ? "Yes" : "No"}</td>
             </tr>
           ))}
@@ -313,15 +351,16 @@ function EmployeeDash() {
           </thead>
           <tbody>
             {currentRentals.map((rental) => (
-              <tr key={rental.rental_id}>
-                <td>{rental.user_email}</td>
+              // Hydration fix (tight <tr> and <td>)
+              <tr key={rental.reserve_id}><td>{rental.user_email}</td>
                 <td>{rental.title}</td>
                 <td>{rental.status}</td>
                 <td>
                   <select
                     value={rental.status}
                     onChange={(e) =>
-                      updateRentalStatus(rental.rental_id, e.target.value)
+                       // Use reserve_id in the function call
+                      updateRentalStatus(rental.reserve_id, e.target.value)
                     }
                   >
                     <option value="waiting_for_pickup">
