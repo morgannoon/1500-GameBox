@@ -88,7 +88,6 @@ def require_employee(f):
 
     return wrapper
 
-
 def get_employee_from_token():
     auth_header = request.headers.get("Authorization")
 
@@ -102,6 +101,59 @@ def get_employee_from_token():
     except Exception as e:
         print("Token decode error:", e)
         return None
+
+# --------------------------
+#       REGISTRATION
+# --------------------------
+@app.route('/api/register', methods=['POST'])
+def register():
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+ 
+        if not username or not email or not password:
+            return jsonify({"error": "All fields are required"}), 400
+ 
+        first_name, last_name = username.split('_') if '_' in username else (username, '')
+ 
+        hashed_password = generate_password_hash(password)
+ 
+        con = get_db_connection()
+        cursor = con.cursor(dictionary=True)
+ 
+        cursor.execute("SELECT * FROM Customer WHERE email = %s", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            con.close()
+            return jsonify({"error": "Email already exists"}), 409
+ 
+        cursor.execute(
+            "INSERT INTO Customer (password, first_name, last_name, email) VALUES (%s, %s, %s, %s)",
+            (hashed_password, first_name, last_name, email)
+        )
+        con.commit()
+        customer_id = cursor.lastrowid
+ 
+        cursor.close()
+        con.close()
+ 
+        session.permanent = True
+        session['customer_id'] = customer_id
+        session['email'] = email
+        session['username'] = username
+ 
+        return jsonify({
+            "message": "Registration successful",
+            "customer_id": customer_id,
+            "username": username,
+            "email": email
+        }), 201
+ 
+    except Exception as e:
+        print(f"Registration error: {str(e)}")
+        return jsonify({"error": "Registration failed"}), 500
 
 # --------------------------
 #       SIGN IN (User)
@@ -172,7 +224,7 @@ def get_games():
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
         cursor.execute("""
-            SELECT g.game_id, g.title, g.description, g.image_url AS image,
+            SELECT g.game_id, g.title, g.description,
                    g.price AS rentalPrice, g.maturity_rating AS maturity,
                    g.platform_name, g.release_year AS releaseYear,
                    IFNULL(SUM(i.available_copies),0) AS total_available,
@@ -632,28 +684,47 @@ def update_rental_status(rental_id):
         if not new_status:
             return jsonify({"error": "Status is required"}), 400
 
-        # Optional: validate allowed statuses
         allowed_statuses = ["waiting_for_pickup", "picked_up", "returned", "late"]
         if new_status not in allowed_statuses:
             return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
 
         con = get_db_connection()
-        cursor = con.cursor()
+        cursor = con.cursor(dictionary=True)
 
-        # Update the rental status
-        # Note: rental_id in frontend maps to reserve_id in DB
+        # Fetch the rental so we can read old status + game/store IDs
         cursor.execute(
-            "UPDATE Reserve SET status = %s WHERE reserve_id = %s", 
-            (new_status, rental_id)
+            "SELECT reserve_id, game_id, store_id, status FROM Reserve WHERE reserve_id = %s",
+            (rental_id,)
         )
-        con.commit()
+        rental = cursor.fetchone()
 
-        # Check if any row was updated
-        if cursor.rowcount == 0:
+        if not rental:
             cursor.close()
             con.close()
             return jsonify({"error": "Rental not found"}), 404
 
+        old_status = rental["status"]
+        game_id = rental["game_id"]
+        store_id = rental["store_id"]
+
+        # Update the rental status
+        cursor.execute(
+            "UPDATE Reserve SET status = %s WHERE reserve_id = %s",
+            (new_status, rental_id)
+        )
+
+        # If the rental is being returned & WAS NOT already returned → add inventory back
+        if new_status == "returned" and old_status != "returned":
+            cursor.execute(
+                """
+                UPDATE Inventory
+                SET available_copies = available_copies + 1
+                WHERE game_id = %s AND store_id = %s
+                """,
+                (game_id, store_id)
+            )
+
+        con.commit()
         cursor.close()
         con.close()
 
@@ -664,7 +735,6 @@ def update_rental_status(rental_id):
         print("Error updating rental status:", e)
         traceback.print_exc()
         return jsonify({"error": "Failed to update rental status"}), 500
-
 
 
 # --------------------------

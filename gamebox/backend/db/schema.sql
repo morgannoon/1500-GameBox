@@ -116,24 +116,24 @@ INSERT INTO Employee (password, first_name, last_name, business_email, store_id,
 ('emp123', 'Chandler', 'Bing', 'chandler.bing@gamebox.com', 1, '412-555-0109'),
 ('emp123', 'Phoebe', 'Buffay', 'phoebe.buffay@gamebox.com', 2, '412-555-0110');
 
--- Insert Games
-INSERT INTO Game (title, price, availability, platform_name, release_year, maturity_rating, genre, image_url, description) VALUES
-('Super Mario Odyssey', 59.99, TRUE, 'Switch', 2017, 'E', 'Platformer', 'https://example.com/mario.jpg', 'Join Mario on a massive, globe-trotting 3D adventure!'),
-('The Legend of Zelda: Breath of the Wild', 69.99, TRUE, 'Switch', 2017, 'E', 'Action-Adventure', 'https://example.com/zelda.jpg', 'Explore the wilds of Hyrule in this open-world adventure.'),
-('Halo Infinite', 59.99, TRUE, 'Xbox', 2021, 'T', 'Shooter', 'https://example.com/halo.jpg', 'Master Chief returns in the next chapter of the Halo saga.'),
-('God of War', 49.99, TRUE, 'PlayStation', 2018, 'M', 'Action', 'https://example.com/gow.jpg', 'Kratos journeys with his son through Norse mythology.'),
-('Minecraft', 26.95, TRUE, 'PC', 2011, 'E', 'Sandbox', 'https://example.com/minecraft.jpg', 'Build and explore infinite worlds with friends.'),
-('Fortnite', 0.00, TRUE, 'PC', 2017, 'T', 'Battle Royale', 'https://example.com/fortnite.jpg', 'Join the battle royale and be the last one standing.'),
-('FIFA 23', 59.99, TRUE, 'PC', 2022, 'E', 'Sports', 'https://example.com/fifa23.jpg', 'Experience the world\'s most popular soccer game.'),
-('Call of Duty: Modern Warfare', 59.99, TRUE, 'PC', 2019, 'M', 'Shooter', 'https://example.com/cod.jpg', 'Engage in modern military combat missions.'),
-('Animal Crossing: New Horizons', 59.99, TRUE, 'Switch', 2020, 'E', 'Simulation', 'https://example.com/acnh.jpg', 'Create your perfect island paradise.'),
-('Cyberpunk 2077', 49.99, TRUE, 'PC', 2020, 'M', 'RPG', 'https://example.com/cyberpunk.jpg', 'Explore the dystopian Night City.'),
-('Elden Ring', 59.99, TRUE, 'PC', 2022, 'M', 'RPG', 'https://example.com/eldenring.jpg', 'Embark on a journey through the Lands Between.'),
-('Grand Theft Auto V', 29.99, TRUE, 'PC', 2013, 'M', 'Action', 'https://example.com/gta5.jpg', 'Experience the sprawling city of Los Santos.'),
-('Red Dead Redemption 2', 59.99, TRUE, 'PC', 2018, 'M', 'Action', 'https://example.com/rdr2.jpg', 'An epic tale of life in America\'s unforgiving heartland.'),
-('Among Us', 4.99, TRUE, 'PC', 2018, 'E', 'Party', 'https://example.com/amongus.jpg', 'Work together to find the imposter aboard the spaceship.'),
-('The Witcher 3: Wild Hunt', 39.99, TRUE, 'PC', 2015, 'M', 'RPG', 'https://example.com/witcher3.jpg', 'Hunt monsters and uncover a dark fantasy world.'),
-('Overwatch', 39.99, TRUE, 'PC', 2016, 'T', 'Shooter', 'https://example.com/overwatch.jpg', 'Team-based shooter with unique heroes.');
+-- Insert Games (URLs removed)
+INSERT INTO Game (title, price, availability, platform_name, release_year, maturity_rating, genre, description) VALUES
+('Super Mario Odyssey', 59.99, TRUE, 'Switch', 2017, 'E', 'Platformer', 'Join Mario on a massive, globe-trotting 3D adventure!'),
+('The Legend of Zelda: Breath of the Wild', 69.99, TRUE, 'Switch', 2017, 'E', 'Action-Adventure', 'Explore the wilds of Hyrule in this open-world adventure.'),
+('Halo Infinite', 59.99, TRUE, 'Xbox', 2021, 'T', 'Shooter', 'Master Chief returns in the next chapter of the Halo saga.'),
+('God of War', 49.99, TRUE, 'PlayStation', 2018, 'M', 'Action', 'Kratos journeys with his son through Norse mythology.'),
+('Minecraft', 26.95, TRUE, 'PC', 2011, 'E', 'Sandbox', 'Build and explore infinite worlds with friends.'),
+('Fortnite', 0.00, TRUE, 'PC', 2017, 'T', 'Battle Royale', 'Join the battle royale and be the last one standing.'),
+('FIFA 23', 59.99, TRUE, 'PC', 2022, 'E', 'Sports', 'Experience the world''s most popular soccer game.'),
+('Call of Duty: Modern Warfare', 59.99, TRUE, 'PC', 2019, 'M', 'Shooter', 'Engage in modern military combat missions.'),
+('Animal Crossing: New Horizons', 59.99, TRUE, 'Switch', 2020, 'E', 'Simulation', 'Create your perfect island paradise.'),
+('Cyberpunk 2077', 49.99, TRUE, 'PC', 2020, 'M', 'RPG', 'Explore the dystopian Night City.'),
+('Elden Ring', 59.99, TRUE, 'PC', 2022, 'M', 'RPG', 'Embark on a journey through the Lands Between.'),
+('Grand Theft Auto V', 29.99, TRUE, 'PC', 2013, 'M', 'Action', 'Experience the sprawling city of Los Santos.'),
+('Red Dead Redemption 2', 59.99, TRUE, 'PC', 2018, 'M', 'Action', 'An epic tale of life in America''s unforgiving heartland.'),
+('Among Us', 4.99, TRUE, 'PC', 2018, 'E', 'Party', 'Work together to find the imposter aboard the spaceship.'),
+('The Witcher 3: Wild Hunt', 39.99, TRUE, 'PC', 2015, 'M', 'RPG', 'Hunt monsters and uncover a dark fantasy world.'),
+('Overwatch', 39.99, TRUE, 'PC', 2016, 'T', 'Shooter', 'Team-based shooter with unique heroes.');
 
 -- Insert Inventory (random stock)
 INSERT INTO Inventory (game_id, store_id, available_copies) VALUES

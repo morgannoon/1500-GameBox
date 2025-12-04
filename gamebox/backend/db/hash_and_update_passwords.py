@@ -2,13 +2,13 @@ import mysql.connector
 from werkzeug.security import generate_password_hash
 
 # --- MySQL connection settings ---
-MYSQL_HOST = "127.0.0.1"# Or your Docker service name if applicable
+MYSQL_HOST = "127.0.0.1"
 MYSQL_PORT = 3306
 MYSQL_USER = "root"
 MYSQL_PASSWORD = "mysqlpassword4life"
 MYSQL_DB = "videogamedb"
 
-# --- Employee emails and plain password ---
+# --- Employee emails + password ---
 employee_emails = [
     "tom.hanks@gamebox.com",
     "sara.connor@gamebox.com",
@@ -21,8 +21,22 @@ employee_emails = [
     "chandler.bing@gamebox.com",
     "phoebe.buffay@gamebox.com"
 ]
+employee_plain_password = "emp123"
 
-plain_employee_password = "emp123"
+# --- Customer emails + password ---
+customer_emails = [
+    "alice.johnson@example.com",
+    "bob.smith@example.com",
+    "charlie.brown@example.com",
+    "diana.prince@example.com",
+    "evan.taylor@example.com",
+    "fiona.davis@example.com",
+    "george.miller@example.com",
+    "hannah.wilson@example.com",
+    "ian.moore@example.com",
+    "julia.anderson@example.com"
+]
+customer_plain_password = "pass123"
 
 # --- Connect to MySQL ---
 con = None
@@ -38,25 +52,35 @@ try:
     cursor = con.cursor()
     print("Connected to MySQL successfully.")
 
-    # --- Generate hash once for efficiency ---
-    hashed_password = generate_password_hash(plain_employee_password)
-    print(f"Generated hash for password '{plain_employee_password}': {hashed_password[:30]}...")
+    # --- Generate hashes ---
+    employee_hash = generate_password_hash(employee_plain_password)
+    customer_hash = generate_password_hash(customer_plain_password)
 
-    # --- Update each employee ---
+    print(f"Employee password hash: {employee_hash[:30]}...")
+    print(f"Customer password hash: {customer_hash[:30]}...")
+
+    # --- Update Employees ---
     for email in employee_emails:
-        # NOTE: We assume the email is stored in the 'business_email' column for employees
         cursor.execute(
             "UPDATE Employee SET password=%s WHERE business_email=%s",
-            (hashed_password, email)
+            (employee_hash, email)
         )
-        print(f"Updated password for employee {email}")
+        print(f"Updated Employee: {email}")
 
-    # Commit changes
+    # --- Update Customers ---
+    for email in customer_emails:
+        cursor.execute(
+            "UPDATE Customer SET password=%s WHERE email=%s",
+            (customer_hash, email)
+        )
+        print(f"Updated Customer: {email}")
+
+    # Commit everything
     con.commit()
-    print("\nAll employee passwords updated successfully!")
+    print("\nAll employee and customer passwords updated successfully!")
 
 except mysql.connector.Error as err:
-    print(f"Error updating employee passwords: {err}")
+    print(f"Error: {err}")
 
 finally:
     if cursor:
