@@ -9,33 +9,63 @@ function SignIn() {
   const [isEmployee, setIsEmployee] = useState(false);
   const navigate = useNavigate();
 
-  // Check auth by verifying jwt exists AND is valid (ping server)
+  // --- Check auth by trying both employee and customer endpoints ---
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
 
-      if (!token) return; // User not logged in
+      if (!token) return;
 
+      // NOTE: We run checks here to clear invalid tokens, but DO NOT redirect.
+      // The user must click "Sign In" to use the valid token.
+
+      // 1. Try Employee Check first
       try {
-        const endpoint = isEmployee
-          ? "http://localhost:5001/api/check-auth-employee"
-          : "http://localhost:5001/api/check-auth";
+        const employeeResponse = await fetch(
+          "http://localhost:5001/api/check-auth-employee",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-        const response = await fetch(endpoint, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          navigate(isEmployee ? "/employeeDash" : "/userDash");
+        if (employeeResponse.ok) {
+          // DO NOT REDIRECT HERE. Allow user to see the form.
+          // navigate("/employeeDash"); 
+          return;
         }
       } catch (err) {
-        console.error("Error checking auth:", err);
+        // Non-critical error. Continue to customer check.
+      }
+
+      // 2. Try Customer Check
+      try {
+        const customerResponse = await fetch(
+          "http://localhost:5001/api/check-auth",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (customerResponse.ok) {
+          // DO NOT REDIRECT HERE. Allow user to see the form.
+          // navigate("/Home"); 
+          return;
+        } 
+        
+        // If the token fails both checks (401 or 403), clear it.
+        if (customerResponse.status === 401 || customerResponse.status === 403) {
+           localStorage.removeItem("token");
+        }
+      } catch (err) {
+        console.error("Error checking customer auth:", err);
       }
     };
 
+    // FIX: The checkAuth logic is now run to cleanup bad tokens, but won't force navigation.
     checkAuth();
-  }, [navigate, isEmployee]);
+  }, [isEmployee, navigate]); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,10 +85,11 @@ function SignIn() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save JWT
+        // Clear any old token and save the new JWT
+        localStorage.removeItem("token");
         localStorage.setItem("token", data.token);
 
-        // Navigate user
+        // This is the ONLY place where redirection occurs: after a successful form submission.
         navigate(isEmployee ? "/employeeDash" : "/Home");
       } else {
         setError(data.error || "Invalid email or password");
@@ -87,8 +118,14 @@ function SignIn() {
         <div className="toggle-login">
           <button
             type="button"
-            className={isEmployee ? "" : "active-toggle"}
-            onClick={() => setIsEmployee(false)}
+            className={!isEmployee ? "active-toggle" : ""}
+            onClick={() => {
+              setIsEmployee(false);
+              // Clear state on toggle
+              setError('');
+              setEmail('');
+              setPassword('');
+            }}
           >
             User
           </button>
@@ -96,7 +133,13 @@ function SignIn() {
           <button
             type="button"
             className={isEmployee ? "active-toggle" : ""}
-            onClick={() => setIsEmployee(true)}
+            onClick={() => {
+              setIsEmployee(true);
+              // Clear state on toggle
+              setError('');
+              setEmail('');
+              setPassword('');
+            }}
           >
             Employee
           </button>
