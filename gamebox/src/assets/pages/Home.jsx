@@ -111,8 +111,8 @@ function Home() {
         <div className="filters-form">
           <select name="store" value={filters.store} onChange={handleFilterChange}>
             <option value="">All Stores</option>
-            <option value="1">Downtown</option>
-            <option value="2">Uptown</option>
+            <option value="2">Downtown</option>
+            <option value="1">Uptown</option>
           </select>
 
           {/* NEW checkbox */}
