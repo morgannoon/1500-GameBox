@@ -102,9 +102,7 @@ def get_employee_from_token():
         return None
 
 
-# --------------------------
-#       REGISTRATION
-# --------------------------
+
 # --------------------------
 #       REGISTRATION
 # --------------------------
@@ -724,18 +722,22 @@ def delete_game(game_id):
 # Employee get User's Rentals
 # --------------------------
 @app.route("/api/employee/current-rentals", methods=["GET"])
-@require_employee  # JWT check for employee
+@require_employee
 def get_current_rentals_employee():
-    # Get email from query parameters
     customer_email = request.args.get("email")
     if not customer_email:
         return jsonify({"error": "Customer email query parameter is required"}), 400
 
     try:
+        # Get store_id from the employee token (set by require_employee)
+        employee_store_id = request.employee.get("store_id")
+
+        if not employee_store_id:
+            return jsonify({"error": "Employee store_id missing from token"}), 400
+
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
 
-        # Fetch rentals for the given customer email
         cursor.execute("""
             SELECT 
                 r.reserve_id, 
@@ -750,7 +752,8 @@ def get_current_rentals_employee():
             JOIN Game g ON r.game_id = g.game_id
             JOIN Store s ON r.store_id = s.store_id
             WHERE c.email = %s
-        """, (customer_email,))
+              AND r.store_id = %s
+        """, (customer_email, employee_store_id))
 
         rentals = cursor.fetchall()
         cursor.close()
@@ -760,7 +763,7 @@ def get_current_rentals_employee():
 
     except Exception as e:
         print("Error fetching current rentals (employee):", e)
-        traceback.print_exc()  # Prints full stack trace for debugging
+        traceback.print_exc()
         return jsonify({"error": "Failed to fetch rentals"}), 500
 
 
