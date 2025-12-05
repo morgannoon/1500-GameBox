@@ -240,7 +240,7 @@ def get_games():
         con = get_db_connection()
         cursor = con.cursor(dictionary=True)
 
-        
+        # Filters
         store = request.args.get("store")
         available = request.args.get("available")
         minPrice = request.args.get("minPrice")
@@ -248,17 +248,17 @@ def get_games():
         releaseYear = request.args.get("releaseYear")
         maturity = request.args.get("maturity")
         minRating = request.args.get("minRating")
+        sortPrice = request.args.get("sortPrice")  # 🔥 NEW
 
-        
         conditions = []
         params = []
 
-        # Store filter -> requires joining inventory by store
+        # Store filter
         if store:
             conditions.append("i.store_id = %s")
             params.append(store)
 
-        # Available only -> total_available > 0
+        # Available only
         if available == "true":
             conditions.append("i.available_copies > 0")
 
@@ -281,12 +281,12 @@ def get_games():
             conditions.append("g.maturity_rating = %s")
             params.append(maturity)
 
-        # Minimum rating
+        # Minimum rating (HAVING alternative but WHERE works with AVG)
         if minRating:
             conditions.append("AVG(r.rating) >= %s")
             params.append(minRating)
 
-        # ---- Build final SQL ----
+        # ---- Build SQL ----
         sql = """
             SELECT 
                 g.game_id, g.title, g.description,
@@ -301,16 +301,21 @@ def get_games():
             LEFT JOIN Reviews r ON g.game_id = r.game_id
         """
 
-        
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
 
         sql += " GROUP BY g.game_id"
 
+        # 🔥 SORTING LOGIC HERE
+        if sortPrice == "asc":
+            sql += " ORDER BY rentalPrice ASC"
+        elif sortPrice == "desc":
+            sql += " ORDER BY rentalPrice DESC"
+
         cursor.execute(sql, params)
         games = cursor.fetchall()
 
-        # Add "available" boolean
+        # Add available boolean
         for game in games:
             game['available'] = game['total_available'] > 0
 
@@ -322,7 +327,6 @@ def get_games():
     except Exception as e:
         print(f"Game fetch error: {e}")
         return jsonify({"error": "Failed to fetch games"}), 500
-
 
 
 # --------------------------

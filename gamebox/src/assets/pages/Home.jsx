@@ -19,6 +19,7 @@ function Home() {
     releaseYear: "",
     maturity: "",
     minRating: "",
+    sortPrice: "", // 🔥 NEW
   });
 
   // Handle filter changes
@@ -39,7 +40,6 @@ function Home() {
     const params = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
-      // Skip empty values
       if (value === "" || value === null || value === undefined) return;
 
       if (key === "available") {
@@ -73,16 +73,14 @@ function Home() {
     }
   };
 
-  // Re-fetch games whenever filters change
+  // Re-fetch when filters change
   useEffect(() => {
     fetchGames();
   }, [filters]);
 
-  // Navigation actions
   const goToDashboard = () => navigate("/UserDash");
   const goToGameDetails = (gameId) => navigate(`/game/${gameId}`);
 
-  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/signin");
@@ -115,7 +113,6 @@ function Home() {
             <option value="1">Uptown</option>
           </select>
 
-          {/* checkbox */}
           <label className="available-check">
             <input
               type="checkbox"
@@ -168,6 +165,17 @@ function Home() {
             value={filters.minRating}
             onChange={handleFilterChange}
           />
+
+          {/* 🔥 NEW SORT BY PRICE FILTER */}
+          <select
+            name="sortPrice"
+            value={filters.sortPrice}
+            onChange={handleFilterChange}
+          >
+            <option value="">Sort by Price</option>
+            <option value="asc">Price: Low → High</option>
+            <option value="desc">Price: High → Low</option>
+          </select>
         </div>
       </section>
 
@@ -197,9 +205,7 @@ function Home() {
 
                 <p>Available Copies: {game.total_available ?? 0}</p>
 
-                <p>
-                  Rating: {!isNaN(rating) ? rating.toFixed(1) + "/5" : "N/A"}
-                </p>
+                <p>Rating: {!isNaN(rating) ? rating.toFixed(1) + "/5" : "N/A"}</p>
 
                 <div className="card-buttons">
                   <button onClick={() => goToGameDetails(game.game_id)}>
